@@ -14,3 +14,4 @@ Cargo.lock
 *.pdb
 /.idea/vcs.xml
 /.idea/discord.xml
+/log/log3.log

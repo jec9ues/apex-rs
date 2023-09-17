@@ -4,6 +4,7 @@ pub mod constants;
 pub mod function;
 pub mod math;
 pub mod data;
+pub mod cache;
 
 
 use std::sync::Once;
