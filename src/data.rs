@@ -2,6 +2,7 @@ use std::mem::size_of;
 use std::ptr::addr_of;
 use std::thread::sleep;
 use memprocfs::*;
+use pretty_hex::PrettyHex;
 use crate::constants::offsets::*;
 use crate::function::{Pos3, read_bone_from_hitbox};
 use crate::mem::*;
@@ -9,9 +10,9 @@ use crate::mem::*;
 #[derive(Debug, Copy, Clone, Default)]
 pub struct Player {
     pub pointer: u64,
+    pub bone_pointer: u64,
     pub hitbox: Hitbox,
 }
-
 
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -54,14 +55,40 @@ impl Player {
         let index_cache = read_u16(vp, hitbox_array + 0x4);
         let hitbox_index = ((index_cache & 0xFFFE) << (4 * (index_cache & 1)));
 
-        self.hitbox.head.index = read_u16(vp, hitbox_index as u64 + hitbox_array + (0 * 0x20));
+        let data = read_mem(vp, hitbox_index as u64 + hitbox_array, 19 * 0x20);
+        // println!("{:?}", data.hex_dump());
+        let bone_index: Vec<u16> = data.chunks_exact(0x20)
+            .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
+            .collect();
+
+        self.hitbox.head.index = bone_index[0];
+        self.hitbox.neck.index = bone_index[1];
+        self.hitbox.upper_chest.index = bone_index[2];
+        self.hitbox.lower_chest.index = bone_index[3];
+        self.hitbox.stomach.index = bone_index[4];
+        self.hitbox.hip.index = bone_index[5];
+        self.hitbox.left_shoulder.index = bone_index[6];
+        self.hitbox.left_elbow.index = bone_index[7];
+        self.hitbox.left_hand.index = bone_index[8];
+        self.hitbox.right_shoulder.index = bone_index[9];
+        self.hitbox.right_elbow.index = bone_index[10];
+        self.hitbox.right_hand.index = bone_index[11];
+        self.hitbox.left_thigh.index = bone_index[12];
+        self.hitbox.left_knee.index = bone_index[13];
+        self.hitbox.left_foot.index = bone_index[14];
+        self.hitbox.right_thigh.index = bone_index[16];
+        self.hitbox.right_knee.index = bone_index[17];
+        self.hitbox.right_foot.index = bone_index[18];
     }
 
-    pub fn updaye_bone_position(&mut self, vp: VmmProcess) {
+    pub fn update_pointer(&mut self, vp: VmmProcess) {
+        self.bone_pointer = read_u64(vp, self.pointer + BONE);
+    }
+
+    pub fn update_bone_position(&mut self, vp: VmmProcess) {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-        let bone_pointer = read_u64(vp, self.pointer + BONE);
         const BUFFER_SIZE: u64 = size_of::<f32>() as u64;
-        let matrix: [[f32; 4]; 3] = read_f32_vec(vp, bone_pointer + self.hitbox.head.index as u64 * (12 * BUFFER_SIZE), 12)
+        let matrix: [[f32; 4]; 3] = read_f32_vec(vp, self.bone_pointer + self.hitbox.head.index as u64 * (12 * BUFFER_SIZE), 12)
             .chunks_exact(4)
             .map(|chunk| chunk.try_into().unwrap())
             .collect::<Vec<[f32; 4]>>()
