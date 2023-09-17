@@ -97,6 +97,19 @@ impl Player {
 
         self.hitbox.head.position = [matrix[0][3] + vec_abs_origin[0], matrix[1][3] + vec_abs_origin[1], matrix[2][3] + vec_abs_origin[2]];
     }
+
+    pub fn update_bone_position_test(&mut self, vp: VmmProcess) {
+        let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
+        const BUFFER_SIZE: u64 = size_of::<f32>() as u64;
+        let matrix: [[f32; 4]; 3] = read_f32_vec(vp, self.bone_pointer + self.hitbox.head.index as u64 * (12 * BUFFER_SIZE), 12)
+            .chunks_exact(4)
+            .map(|chunk| chunk.try_into().unwrap())
+            .collect::<Vec<[f32; 4]>>()
+            .try_into()
+            .unwrap();
+        println!("addr -> {}", self.bone_pointer + self.hitbox.head.index as u64 * (12 * BUFFER_SIZE));
+        self.hitbox.head.position = [matrix[0][3] + vec_abs_origin[0], matrix[1][3] + vec_abs_origin[1], matrix[2][3] + vec_abs_origin[2]];
+    }
 }
 
 

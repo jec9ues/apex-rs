@@ -196,7 +196,7 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
         let mut Vh2s: Vec<Pos2> = Vec::new();
         let start_time = Instant::now();
         local_player.update_view_matrix(vp);
-        entity.updaye_bone_position(vp);
+        entity.update_bone_position(vp);
         let h2s = world_to_screen(local_player.view_matrix, Pos3 { x: entity.hitbox.head.position[0], y: entity.hitbox.head.position[1], z: entity.hitbox.head.position[2] }, Pos2::new(2560.0, 1440.0));
         Vh2s.push(h2s);
         let end_time = Instant::now();

@@ -320,7 +320,7 @@ pub fn player_bone(vp: VmmProcess, base: u64) -> Vec<Pos2> {
     for ptr in player_pointer {
         let mut da = Player { pointer: ptr, ..Default::default() };
         da.update_bone_index(vp);
-        da.updaye_bone_position(vp);
+        da.update_bone_position(vp);
         let h2s = world_to_screen(get_matrix(vp, base), Pos3 { x: da.hitbox.head.position[0], y: da.hitbox.head.position[1], z: da.hitbox.head.position[2] }, Pos2::new(2560.0, 1440.0));
         Vh2s.push(h2s);
     }
