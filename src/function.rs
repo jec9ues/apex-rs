@@ -13,7 +13,7 @@ use memprocfs::*;
 use pretty_hex::*;
 
 use mouse_rs::{types::keys::Keys, Mouse};
-use crate::data::{Bone, Player};
+use crate::data::{Bone, Player, Pos3};
 use crate::egui_overlay::egui::Pos2;
 
 
@@ -93,7 +93,7 @@ pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
     // add (1 << 5) skip CWorld
     let data = read_mem(vp, addr + (1 << 5), SIZE);
 
-    data.chunks_exact(32)
+    data.chunks_exact(0x20)
         .map(|chunk| u64::from_le_bytes(chunk[..8].try_into().unwrap()))
         .filter(|&chunk_u64| chunk_u64 != 0)
         .collect()
@@ -105,7 +105,7 @@ pub fn get_entity_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
     // add (1 << 5) skip CWorld
     let data = read_mem(vp, addr + (1 << 5), SIZE);
 
-    data.chunks_exact(32)
+    data.chunks_exact(0x20)
         .map(|chunk| u64::from_le_bytes(chunk[..8].try_into().unwrap()))
         .filter(|&chunk_u64| chunk_u64 != 0)
         .collect()
@@ -321,7 +321,7 @@ pub fn player_bone(vp: VmmProcess, base: u64) -> Vec<Pos2> {
         let mut da = Player { pointer: ptr, ..Default::default() };
         da.update_bone_index(vp);
         da.update_bone_position(vp);
-        let h2s = world_to_screen(get_matrix(vp, base), Pos3 { x: da.hitbox.head.position[0], y: da.hitbox.head.position[1], z: da.hitbox.head.position[2] }, Pos2::new(2560.0, 1440.0));
+        let h2s = world_to_screen(get_matrix(vp, base), da.hitbox.head.position , Pos2::new(2560.0, 1440.0));
         Vh2s.push(h2s);
     }
     return Vh2s;
@@ -467,15 +467,8 @@ pub fn get_bone_matrix(vp: VmmProcess, addr: u64) -> [[f32; 4]; 3] {
 
 
 
-pub struct Pos3 {
-    /// How far to the right.
-    pub x: f32,
 
-    /// How far down.
-    pub y: f32,
-    // implicit w = 1
-    pub z: f32,
-}
+
 
 /*pub fn world_to_screen(matrix: [[f32; 4]; 4], vector: Pos3, screen_size: Pos2) -> Pos2 {
     let mut transformed = Pos3 { x: 0.0, y: 0.0, z: 0.0 };
@@ -607,8 +600,9 @@ pub fn read_bone(vp: VmmProcess, addr: u64, bone_index: u16) -> [f32; 3] {
     if bone_index < 0 || bone_index > 255 {
         return [_vecAbsOrigin[0] + offset[0], _vecAbsOrigin[1] + offset[1], _vecAbsOrigin[2] + offset[2]];
     }
-    println!("bone -> {}", bone_index);
+
     let bone_pointer = read_u64(vp, addr + BONE);
+
     if !is_valid_pointer(bone_pointer) {
         println!("Invalid bone pointer ");
         return [_vecAbsOrigin[0] + offset[0], _vecAbsOrigin[1] + offset[1], _vecAbsOrigin[2] + offset[2]];
@@ -620,7 +614,7 @@ pub fn read_bone(vp: VmmProcess, addr: u64, bone_index: u16) -> [f32; 3] {
         .collect::<Vec<[f32; 4]>>()
         .try_into()
         .unwrap();
-
+    println!("matirx2 -> {:?}", matrix);
     let bone_position = [matrix[0][3], matrix[1][3], matrix[2][3]];
 
     if !is_valid(bone_position) {

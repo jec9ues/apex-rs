@@ -8,9 +8,9 @@ use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use egui_backend::egui::Pos2;
 use memprocfs::*;
-use crate::constants::offsets::{CL_ENTITYLIST, LOCAL_PLAYER};
-use crate::data::{LocalPlayer, Player};
-use crate::function::{get_entity_pointer, get_matrix, get_player_pointer, player_bone, player_bone_position, player_head, Pos3, weaponx_entity, world_to_screen};
+use crate::constants::offsets::*;
+use crate::data::*;
+use crate::function::*;
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
     match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL) {
@@ -78,7 +78,7 @@ pub fn read_f32(vp: VmmProcess, addr: u64) -> f32 {
 }
 
 pub fn read_f32_vec(vp: VmmProcess, addr: u64, amount: usize) -> Vec<f32> {
-    const SIZE: usize = std::mem::size_of::<f32>();
+    const SIZE: usize = size_of::<f32>();
 
     let data_read = read_mem(vp, addr, amount * SIZE);
 
@@ -190,14 +190,16 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
     let mut entity = Player { pointer: *player_pointer.get(0).unwrap(), ..Default::default() };
     let mut local_player = LocalPlayer { base, ..Default::default() };
     local_player.update_pointer(vp);
-    entity.update_bone_index(vp);
+    entity.update_pointer(vp);
 
     loop {
+        entity.update_bone_index(vp);
         let mut Vh2s: Vec<Pos2> = Vec::new();
         let start_time = Instant::now();
         local_player.update_view_matrix(vp);
         entity.update_bone_position(vp);
-        let h2s = world_to_screen(local_player.view_matrix, Pos3 { x: entity.hitbox.head.position[0], y: entity.hitbox.head.position[1], z: entity.hitbox.head.position[2] }, Pos2::new(2560.0, 1440.0));
+        let h2s = world_to_screen(local_player.view_matrix, entity.hitbox.head.position, Pos2::new(2560.0, 1440.0));
+        // let h2s = player_head(vp, base);
         Vh2s.push(h2s);
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
