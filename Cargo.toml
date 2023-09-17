@@ -1,0 +1,21 @@
+[package]
+name = "backend_menu"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+egui_backend = "*"
+egui_window_glfw_passthrough = "*"
+crossbeam-channel = "*"
+egui_render_three_d = "*"
+tracing-subscriber = { version = "*", features = ["env-filter"] }
+
+pretty-hex = "*"
+memprocfs = "*"
+nix = "*"
+log = "*"
+log4rs = "*"
+mouse-rs = "*"
+
