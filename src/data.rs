@@ -8,15 +8,18 @@ use crate::constants::offsets::*;
 use crate::function::*;
 use crate::mem::*;
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Player {
     pub pointer: u64,
     pub bone_pointer: u64,
     pub hitbox: Hitbox,
+    pub status: Status,
+    pub position: Pos3,
+    pub distance: f32,
 }
 
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Hitbox {
     pub head: Bone,
     pub neck: Bone,
@@ -51,6 +54,37 @@ pub struct Pos3 {
     pub y: f32,
 
     pub z: f32,
+}
+#[derive(Debug, Clone, Default)]
+pub struct Status {
+    pub dead: u16,
+    pub visible: bool,
+    pub knocked: u16,
+    pub alive: bool,
+    pub health: u16,
+    pub max_health: u16,
+    pub shield: u16,
+    pub max_shield: u16,
+    pub team: u16,
+    pub name: String,
+
+}
+
+impl Status {
+    /// addr -> entity pointer
+    pub fn update(&mut self, vp: VmmProcess, addr: u64, base: u64) {
+        self.health = read_u16(vp, addr + HEALTH);
+        self.max_health = read_u16(vp, addr + MAX_HEALTH);
+        self.shield = read_u16(vp, addr + SHIELD);
+        self.max_shield = read_u16(vp, addr + MAX_SHIELD);
+        self.team = read_u16(vp, addr + TEAM_NUM);
+        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+        self.dead = read_u16(vp, addr + LIFE_STATE);
+        let name_index = read_u16(vp, addr + NAME_INDEX);
+        println!("name_index -> {}", name_index);
+        // let name_ptr = read_u64(vp, base + NAME_LIST + (i - 1) * 0x10);
+
+    }
 }
 
 
@@ -142,10 +176,10 @@ impl Player {
 
 
         // float: 4 * matrix: 12 * bone: 200
-        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 200);
+        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 220);
         // println!("{:?}", data.hex_dump());
 
-        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 200);
+        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 220);
 
         for chunk in data.chunks_exact(4) {
             let mut array: [u8; 4] = [0; 4];

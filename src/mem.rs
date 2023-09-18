@@ -191,9 +191,11 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
     let mut local_player = LocalPlayer { base, ..Default::default() };
     local_player.update_pointer(vp);
     entity.update_pointer(vp);
+    entity.update_bone_index(vp);
 
     loop {
-        entity.update_bone_index(vp);
+        entity.status.update(vp, entity.pointer, base);
+        println!("status -> {:?}", entity.status);
         let mut Vh2s: Vec<Pos2> = Vec::new();
         let start_time = Instant::now();
         local_player.update_view_matrix(vp);
