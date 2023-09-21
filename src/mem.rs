@@ -3,18 +3,20 @@ extern crate core;
 
 use log4rs;
 use std::mem::size_of;
+use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use egui_backend::egui::Pos2;
 use memprocfs::*;
-use crate::cache::initialize_match;
+use crate::cache::*;
 use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
+use crate::math::*;
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
-    match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL) {
+    match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
         Err(e) => {
             println!("vmmprocess.mem_read_ex(): fail [{}]", e);
             Vec::new() // 在错误情况下返回一个空的 Vec<u8>
@@ -187,40 +189,48 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
 
     }
 
-    let player_pointer = get_player_pointer_index(vp, base + CL_ENTITYLIST);
-    let p1 = player_pointer.first().unwrap()[0];
-    let mut entity = Player { pointer: p1, ..Default::default() };
-    let mut local_player = LocalPlayer {  ..Default::default() };
-    local_player.update_pointer(vp, base);
+
     // entity.update_pointer(vp);
     // entity.update_bone_index(vp);
-    let mut data = initialize_match(vp, base);
-
+    let mut data = Data::default();
+    data.initialize(vp, base);
+    data.cache_data.local_player.update_pointer(vp, base);
+    let mut tick = 0;
 
     loop {
         // entity.status.update(vp, entity.pointer, base);
 
         // println!("status -> {:?}", entity.status);
         let start_time = Instant::now();
-        local_player.update_view_matrix(vp);
-/*        for pos in data.cache_data.get_players_bones_position(vp) {
+        data.cache_data.local_player.update_view_matrix(vp);
+        /*        for pos in data.cache_data.get_players_bones_position(vp) {
 
-            println!("pos1 -> {:?}", pos);
-            println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
-        };*/
-
+                    println!("pos1 -> {:?}", pos);
+                    println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
+                };*/
+        data.update_cache_high(vp);
+        data.re_cache_pointer(vp);
+        if tick == 60 {
+            data.update_cache_medium(vp);
+        }
+        if tick == 400 {
+            data.update_cache_low(vp);
+        }
         let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
             .iter()
-            .map(|pos| world_to_screen(local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))
+            .map(|pos| world_to_screen(data.cache_data.local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))
             .collect();
-        // entity.update_bone_position(vp);
         let end_time = Instant::now();
+        // entity.update_bone_position(vp);
         let elapsed_time = end_time.duration_since(start_time);
         println!("Loop time -> {:?}", elapsed_time);
 
-        // println!("{:?}", se);
+        println!("high -> {:?}", data.cache_pointer.cache_high);
+        println!("medium -> {:?}", data.cache_pointer.cache_medium);
+        println!("low -> {:?}", data.cache_pointer.cache_low);
         sender.send(vh2s.clone()).expect("TODO: panic message");
-        sleep(Duration::from_micros(100));
+        sleep(Duration::from_micros(10));
+        tick += 1
     }
 }
 

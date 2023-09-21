@@ -1,18 +1,16 @@
 pub mod offsets {
     pub const CL_ENTITYLIST: u64 = 0x1e23418;
     // [Miscellaneous] -> cl_entitylist
+    pub const LOCAL_PLAYER: u64 = 0x21d3758;
+    // LocalPlayer
     pub const NAME_LIST: u64 = 0xc266a60;
     // [Miscellaneous] -> NameList
-    pub const NAME_INDEX: u64 = 0x05c0;
-    // [RecvTable.DT_BaseEntity] -> m_scriptNameIndex
-    pub const LIFE_STATE: u64 = 0x06c8;
-    // [RecvTable.DT_Player] -> m_lifeState
-    pub const BLEED_OUT_STATE: u64 = 0x26a0;
-    // [RecvTable.DT_Player] -> m_bleedoutState
+    pub const VIEW_RENDER: u64 = 0x74210a8;
+    // ViewRender
+    pub const VIEW_MATRIX: u64 = 0x11a350;
+    // ViewMatrix
     pub const LEVEL_NAME: u64 = 0x16f71e0;
     // [Miscellaneous] -> LevelName
-    pub const LOCAL_ORIGIN: u64 = 0x0188;
-    // [DataMap.CBaseViewModel] -> m_localOrigin
     pub const GLOW_COLOR: u64 = 0x200;
     // [Miscellaneous] -> glow_color
     pub const GLOW_TYPE: u64 = 0x29c;
@@ -33,19 +31,20 @@ pub mod offsets {
     // [RecvTable.DT_TitanSoul] m_shieldHealth
     pub const MAX_SHIELD: u64 = 0x01a4;
     // [RecvTable.DT_TitanSoul] m_shieldHealthMax
-
+    pub const LIFE_STATE: u64 = 0x06c8;
+    // [RecvTable.DT_Player] -> m_lifeState
+    pub const BLEED_OUT_STATE: u64 = 0x26a0;
+    // [RecvTable.DT_Player] -> m_bleedoutState
     pub const STUDIOHDR: u64 = 0x1020;
     //CBaseAnimating!m_pStudioHdr
     pub const BONE: u64 = 0x0dd0 + 0x48;
     // m_nForceBone + 0x48
+    pub const LOCAL_ORIGIN: u64 = 0x0188;
+    // [DataMap.CBaseViewModel] -> m_localOrigin
     pub const ABS_VECTORORIGIN: u64 = 0x17c;
     // [DataMap.CBaseViewModel] -> m_vecAbsOrigin
     pub const SIGN_NAME: u64 = 0x04b0 + 0x9;
     // m_iSignifierName
-    pub const VIEW_RENDER: u64 = 0x74210a8;
-    // ViewRender
-    pub const VIEW_MATRIX: u64 = 0x11a350;
-    // ViewMatrix
     pub const ITEM_ID: u64 = 0x1578;
     // m_customScriptInt
     pub const AMMO: u64 = 0x15a0;
@@ -64,5 +63,4 @@ pub mod offsets {
     // m_playerData + m_curZoomFOV
     pub const SEMI_AUTO: u64 = WEAPON_SETTING_BASE + 0x018c;
     // [WeaponSettingsMeta] is_semi_auto / m_isSemiAuto
-    pub const LOCAL_PLAYER: u64 = 0x21d3758; // LocalPlayer
 }

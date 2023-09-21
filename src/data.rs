@@ -1,7 +1,9 @@
 
 use memprocfs::*;
 use crate::constants::offsets::*;
+use crate::egui_overlay::egui::Pos2;
 use crate::function::*;
+use crate::math::distance3d;
 use crate::mem::*;
 
 #[derive(Debug, Clone, Default)]
@@ -52,12 +54,23 @@ pub struct Pos3 {
 
     pub z: f32,
 }
+
+impl Pos3 {
+    pub fn from_array(value: [f32; 3]) -> Self {
+        Self {
+            x: value[0],
+            y: value[1],
+            z: value[2],
+        }
+
+    }
+
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct Status {
     pub dead: u16,
-    pub visible: bool,
     pub knocked: u16,
-    pub alive: bool,
     pub health: u16,
     pub max_health: u16,
     pub shield: u16,
@@ -69,7 +82,7 @@ pub struct Status {
 
 impl Status {
     /// addr -> entity pointer
-    pub fn update(&mut self, vp: VmmProcess, addr: u64, base: u64) {
+    pub fn initialize(&mut self, vp: VmmProcess, addr: u64, base: u64, index: u64) {
         self.health = read_u16(vp, addr + HEALTH);
         self.max_health = read_u16(vp, addr + MAX_HEALTH);
         self.shield = read_u16(vp, addr + SHIELD);
@@ -77,27 +90,31 @@ impl Status {
         self.team = read_u16(vp, addr + TEAM_NUM);
         self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
         self.dead = read_u16(vp, addr + LIFE_STATE);
-        let name_index = read_u16(vp, addr + NAME_INDEX);
-        // println!("name_index -> {}", name_index);
+        let name_ptr = read_u64(vp, base + NAME_LIST + (index - 1) * 0x10);
+        self.name = read_string(vp, name_ptr);
+        // println!("name {index} -> {}", self.name)
+    }
 
-        // println!("{:?}", read_mem(vp, name_ptr, 1000).hex_dump());
-        for i in 1..61 {
-            let name_ptr = read_u64(vp, base + NAME_LIST + (i - 1) * 0x10);
-            self.name = read_string(vp, name_ptr);
-            // println!("name {i} -> {}", self.name)
-        }
-
-
+    pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
+        self.health = read_u16(vp, addr + HEALTH);
+        self.max_health = read_u16(vp, addr + MAX_HEALTH);
+        self.shield = read_u16(vp, addr + SHIELD);
+        self.max_shield = read_u16(vp, addr + MAX_SHIELD);
+        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+        self.dead = read_u16(vp, addr + LIFE_STATE);
+        // println!("name {index} -> {}", self.name)
     }
 }
 
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct LocalPlayer {
     pub pointer: u64,
     pub render_pointer: u64,
     pub matrix_pointer: u64,
     pub view_matrix: [[f32; 4]; 4],
+    pub status: Status,
+    pub position: Pos3,
 }
 
 impl LocalPlayer {
@@ -105,6 +122,10 @@ impl LocalPlayer {
         self.pointer = read_u64(vp, base + LOCAL_PLAYER);
         self.render_pointer = read_u64(vp, base + VIEW_RENDER);
         self.matrix_pointer = read_u64(vp, self.render_pointer + VIEW_MATRIX);
+    }
+
+    pub fn update_position(&mut self, vp: VmmProcess) {
+        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
     }
 
     pub fn update_view_matrix(&mut self, vp: VmmProcess) {
@@ -156,6 +177,13 @@ impl Player {
 
     }
 
+    pub fn update_position(&mut self, vp: VmmProcess) {
+        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
+    }
+
+    pub fn update_distance(&mut self, vp: VmmProcess, pos: &Pos3) {
+        self.distance = distance3d(&self.position, pos)
+    }
     pub fn update_bone_index(&mut self, vp: VmmProcess) {
         let model_pointer = read_u64(vp, self.pointer + STUDIOHDR);
         let studio_hdr = read_u64(vp, model_pointer + 0x8);
@@ -198,10 +226,10 @@ impl Player {
 
 
         // float: 4 * matrix: 12 * bone: 200
-        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 220);
+        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 230);
         // println!("{:?}", data.hex_dump());
 
-        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 220);
+        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 230);
 
         for chunk in data.chunks_exact(4) {
             let mut array: [u8; 4] = [0; 4];
@@ -229,7 +257,7 @@ impl Player {
             .collect();
 
 
-        // println!("{:?}", matrix);
+
         self.hitbox.head.position = Pos3 {
             x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
             y: matrix[self.hitbox.head.index][1][3] + vec_abs_origin[1],
