@@ -1,16 +1,12 @@
-use std::mem::size_of;
-use std::ptr::addr_of;
-use std::thread::sleep;
-use egui_backend::egui::Painter;
-use egui_render_three_d::three_d::ColorTexture::Single;
+
 use memprocfs::*;
-use pretty_hex::PrettyHex;
 use crate::constants::offsets::*;
 use crate::function::*;
 use crate::mem::*;
 
 #[derive(Debug, Clone, Default)]
 pub struct Player {
+    pub index: u64,
     pub pointer: u64,
     pub bone_pointer: u64,
     pub hitbox: Hitbox,
@@ -98,15 +94,16 @@ impl Status {
 
 #[derive(Debug, Copy, Clone, Default)]
 pub struct LocalPlayer {
-    pub base: u64,
+    pub pointer: u64,
     pub render_pointer: u64,
     pub matrix_pointer: u64,
     pub view_matrix: [[f32; 4]; 4],
 }
 
 impl LocalPlayer {
-    pub fn update_pointer(&mut self, vp: VmmProcess) {
-        self.render_pointer = read_u64(vp, self.base + VIEW_RENDER);
+    pub fn update_pointer(&mut self, vp: VmmProcess, base: u64) {
+        self.pointer = read_u64(vp, base + LOCAL_PLAYER);
+        self.render_pointer = read_u64(vp, base + VIEW_RENDER);
         self.matrix_pointer = read_u64(vp, self.render_pointer + VIEW_MATRIX);
     }
 
@@ -127,9 +124,37 @@ impl Player {
     }
 
     /// ptr -> painter
-/*    pub fn draw_bone(&self, ptr: Painter) {
-        ptr.line_segment()
-    }*/
+    pub fn get_bones_position(&self) -> Vec<Pos3>{
+        let mut res: Vec<Pos3> = Vec::new();
+        let bones = [
+            &self.hitbox.head.position,
+            &self.hitbox.neck.position,
+            &self.hitbox.upper_chest.position,
+            &self.hitbox.lower_chest.position,
+            &self.hitbox.stomach.position,
+            &self.hitbox.hip.position,
+            &self.hitbox.left_shoulder.position,
+            &self.hitbox.left_elbow.position,
+            &self.hitbox.left_hand.position,
+            &self.hitbox.right_shoulder.position,
+            &self.hitbox.right_elbow.position,
+            &self.hitbox.right_hand.position,
+            &self.hitbox.left_thigh.position,
+            &self.hitbox.left_knee.position,
+            &self.hitbox.left_foot.position,
+            &self.hitbox.right_thigh.position,
+            &self.hitbox.right_knee.position,
+            &self.hitbox.right_foot.position,
+        ];
+
+// 使用迭代器将所有骨骼的位置添加到 res 中
+        for bone in bones.iter() {
+
+            res.push(**bone);
+        };
+        res
+
+    }
 
     pub fn update_bone_index(&mut self, vp: VmmProcess) {
         let model_pointer = read_u64(vp, self.pointer + STUDIOHDR);
@@ -139,7 +164,7 @@ impl Player {
         let hitbox_array = studio_hdr + ((hitbox_cache & 0xFFFE) << (4 * (hitbox_cache & 1)));
 
         let index_cache = read_u16(vp, hitbox_array + 0x4);
-        let hitbox_index = ((index_cache & 0xFFFE) << (4 * (index_cache & 1)));
+        let hitbox_index = (index_cache & 0xFFFE) << (4 * (index_cache & 1));
         // 19 is bone amount we need
         let data = read_mem(vp, hitbox_index as u64 + hitbox_array, 19 * 0x20);
         // println!("{:?}", data.hex_dump());
@@ -147,7 +172,7 @@ impl Player {
             .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
             .collect();
 
-        println!("{:?}", bone_index);
+        println!("{} -> {:?}", self.pointer, bone_index);
         self.hitbox.head.index = bone_index[0] as usize;
         self.hitbox.neck.index = bone_index[1] as usize;
         self.hitbox.upper_chest.index = bone_index[2] as usize;

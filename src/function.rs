@@ -17,15 +17,12 @@ use crate::data::{Bone, Player, Pos3};
 use crate::egui_overlay::egui::Pos2;
 
 
-
-
 fn move_and_press() {
     let mouse = Mouse::new();
     mouse.move_to(500, 500).expect("Unable to move mouse");
     mouse.press(&Keys::RIGHT).expect("Unable to press button");
     mouse.release(&Keys::RIGHT).expect("Unable to release button");
 }
-
 
 
 /// addr -> entity_list address
@@ -99,6 +96,26 @@ pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
         .collect()
 }
 
+pub fn get_player_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
+    const SIZE: usize = (60 << 5);
+    // add (1 << 5) skip CWorld
+    let data = read_mem(vp, addr + (1 << 5), SIZE);
+
+    data.chunks_exact(0x20)
+        .enumerate()
+        .filter_map(|(index, chunk)| {
+            let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().unwrap());
+            if chunk_u64 != 0 {
+                // println!("Index: {}, Value: {}", index, chunk_u64);
+                Some([index as u64, chunk_u64])
+            } else {
+                // println!("Index: {}, Value: {}", index, chunk_u64);
+                None
+            }
+        })
+        .collect()
+}
+
 /// addr -> entity_list address
 pub fn get_entity_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
     const SIZE: usize = (15000 << 5);
@@ -117,7 +134,7 @@ pub fn item_glow(vp: VmmProcess, addr: u64) {
     let end = entity_list + (15000 << 5);
     let area = (15000 << 5);
 
-    let data = read_mem(vp, entity_list, area );
+    let data = read_mem(vp, entity_list, area);
     let mut array: [u64; 15000] = [0; 15000];
     println!("start -> {:x} end -> {:x}", entity_list, end);
 // 定义块的大小（32个字节）
@@ -138,16 +155,16 @@ pub fn item_glow(vp: VmmProcess, addr: u64) {
         // println!("num -> {} chunk_64 -> {:x} name -> {}", i, chunk_u64, name);
         // info!("{}", read_u64(vp, chunk_u64 + 0x16A0));
         // info!("{:?}", read_mem(vp, chunk_u64 + 0x16A0, 32).hex_dump());
-        let team_num = read_u64(vp, (chunk_u64 + TEAM_NUM ) as u64);
+        let team_num = read_u64(vp, (chunk_u64 + TEAM_NUM) as u64);
         if team_num == 97 {
-            let health = read_u64(vp, (chunk_u64 + HEALTH ) as u64);
+            let health = read_u64(vp, (chunk_u64 + HEALTH) as u64);
 
             if health == 0 { continue; };
             // info!("health -> {}", health);
             println!("chunk_64 -> {:x}", chunk_u64);
             // println!("{:?}", read_mem(vp, (chunk_u64 + GLOW_TYPE) as u64, 16).hex_dump());
-            write_u8(vp, (chunk_u64 + GLOW_THROUGH_WALL ) as u64, 1);
-            write_mem(vp, (chunk_u64 + GLOW_TYPE ) as u64, [101, 102, 96, 75].to_vec());
+            write_u8(vp, (chunk_u64 + GLOW_THROUGH_WALL) as u64, 1);
+            write_mem(vp, (chunk_u64 + GLOW_TYPE) as u64, [101, 102, 96, 75].to_vec());
         }
     }
     // println!("{:?}", array);
@@ -159,7 +176,7 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
     let end = entity_list + (60 << 5);
     let area = (60 << 5);
 
-    let data = read_mem(vp, entity_list, area );
+    let data = read_mem(vp, entity_list, area);
     let mut array: Vec<u64> = Vec::new();
     // println!("start -> {:x} end -> {:x}", entity_list, end);
 // 定义块的大小（32个字节）
@@ -178,9 +195,9 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
         // println!("{:x}", chunk_u64);
         array.push(chunk_u64);
         write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
-        write_u8(vp, chunk_u64 + 0x270,  x);
-        write_u8(vp, chunk_u64 + GLOW_ENABLE,  x);
-        write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4,  0);
+        write_u8(vp, chunk_u64 + 0x270, 0);
+        write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
+        write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, x);
 
         // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 , 0.0);
         // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 + 0x4, 20.0);
@@ -199,10 +216,7 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
             // info!("{}", read_u64(vp, chunk_u64 + 0x16A0));
 
             //
-
         }
-
-
     }
 }
 
@@ -228,6 +242,7 @@ pub fn get_client_class_name(vp: VmmProcess, ptr: u64) -> String {
     let offset = read_u32(vp, get_client_entity + 3);
     let network_name_ptr = read_u64(vp, get_client_entity + offset as u64 + 7 + 16);
     let network_name = read_string(vp, network_name_ptr);
+    println!("{}", network_name);
     return network_name;
 }
 
@@ -313,14 +328,14 @@ pub fn player_head(vp: VmmProcess, base: u64) -> Vec<Pos2> {
             // }
 
             // dead
-            let dead = read_u64(vp, addr + LIFE_STATE );
+            let dead = read_u64(vp, addr + LIFE_STATE);
             {
                 if !(dead > 0) {
                     continue;
                 }
             }
             for i in 0..1 {
-                let head_position = read_bone_position(vp, ptr , 0);
+                let head_position = read_bone_position(vp, ptr, 0);
                 // println!("{:?}", head_position);
                 if head_position[0] == 1.5 {
                     continue;
@@ -343,7 +358,7 @@ pub fn player_bone(vp: VmmProcess, base: u64) -> Vec<Pos2> {
         let mut da = Player { pointer: ptr, ..Default::default() };
         da.update_bone_index(vp);
         da.update_bone_position(vp);
-        let h2s = world_to_screen(get_matrix(vp, base), da.hitbox.head.position , Pos2::new(2560.0, 1440.0));
+        let h2s = world_to_screen(get_matrix(vp, base), da.hitbox.head.position, Pos2::new(2560.0, 1440.0));
         Vh2s.push(h2s);
     }
     return Vh2s;
@@ -353,8 +368,7 @@ pub fn player_bone_position(vp: VmmProcess, base: u64) -> Vec<Pos2> {
     let mut Vh2s: Vec<Pos2> = Vec::new();
     let player_pointer = get_player_pointer(vp, base + CL_ENTITYLIST);
     for ptr in player_pointer {
-
-        let head_position = read_bone_position(vp, ptr , 0);
+        let head_position = read_bone_position(vp, ptr, 0);
         // println!("{:?}", head_position);
         if head_position[0] == 1.5 {
             continue;
@@ -364,7 +378,6 @@ pub fn player_bone_position(vp: VmmProcess, base: u64) -> Vec<Pos2> {
         if h2s.x != 0.0 {
             Vh2s.push(h2s);
         };
-
     }
     return Vh2s;
 }
@@ -388,7 +401,7 @@ pub fn cache_player_bone(vp: VmmProcess, base: u64) -> Vec<Pos2> {
             // }
 
             // dead
-            let dead = read_u64(vp, addr + LIFE_STATE );
+            let dead = read_u64(vp, addr + LIFE_STATE);
             {
                 if !(dead > 0) {
                     continue;
@@ -396,7 +409,7 @@ pub fn cache_player_bone(vp: VmmProcess, base: u64) -> Vec<Pos2> {
             }
 
             for i in 0..1 {
-                let head_position = read_bone_position(vp, ptr , 0);
+                let head_position = read_bone_position(vp, ptr, 0);
                 // println!("{:?}", head_position);
                 if head_position[0] == 1.5 {
                     continue;
@@ -411,10 +424,10 @@ pub fn cache_player_bone(vp: VmmProcess, base: u64) -> Vec<Pos2> {
     }
     return Vh2s;
 }
+
 /// addr -> local_player address
 pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) {
-    let local_player_pointer = read_u64(vp, addr);
-    let mut weapon_handle = read_u64(vp, local_player_pointer + WEAPON);
+    let mut weapon_handle = read_u64(vp, addr + WEAPON);
     weapon_handle &= 0xffff;
 
     let weapon_entity = read_u64(vp, base + CL_ENTITYLIST + (weapon_handle << 5));
@@ -455,6 +468,7 @@ pub fn get_matrix(vp: VmmProcess, addr: u64) -> [[f32; 4]; 4] {
     // println!("{:?}", matrix);
     return matrix;
 }
+
 /// addr -> base address
 pub fn get_matrix_test(vp: VmmProcess, addr: u64) -> [[f32; 4]; 4] {
     let render_pointer = read_u64(vp, addr + VIEW_RENDER);
@@ -486,10 +500,6 @@ pub fn get_bone_matrix(vp: VmmProcess, addr: u64) -> [[f32; 4]; 3] {
     // println!("{:?}", matrix);
     return matrix;
 }
-
-
-
-
 
 
 /*pub fn world_to_screen(matrix: [[f32; 4]; 4], vector: Pos3, screen_size: Pos2) -> Pos2 {
@@ -541,6 +551,7 @@ pub fn world_to_screen(matrix: [[f32; 4]; 4], vector: Pos3, screen_size: Pos2) -
 pub fn is_valid_pointer(pointer: u64) -> bool {
     return pointer > 0x00010000 && pointer < 0x7FFFFFFEFFFF;
 }
+
 ///addr -> entity pointer
 pub fn read_bone_from_hitbox(vp: VmmProcess, addr: u64, hitbox: u64) -> u16 {
     let model_pointer = read_u64(vp, addr + STUDIOHDR);

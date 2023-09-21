@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use egui_backend::egui::Pos2;
 use memprocfs::*;
+use crate::cache::initialize_match;
 use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
@@ -186,33 +187,39 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
 
     }
 
-    let player_pointer = get_player_pointer(vp, base + CL_ENTITYLIST);
-    let mut entity = Player { pointer: *player_pointer.get(0).unwrap(), ..Default::default() };
-    let mut local_player = LocalPlayer { base, ..Default::default() };
-    local_player.update_pointer(vp);
-    entity.update_pointer(vp);
-    entity.update_bone_index(vp);
-
+    let player_pointer = get_player_pointer_index(vp, base + CL_ENTITYLIST);
+    let p1 = player_pointer.first().unwrap()[0];
+    let mut entity = Player { pointer: p1, ..Default::default() };
+    let mut local_player = LocalPlayer {  ..Default::default() };
+    local_player.update_pointer(vp, base);
+    // entity.update_pointer(vp);
+    // entity.update_bone_index(vp);
+    let mut data = initialize_match(vp, base);
 
 
     loop {
-
-        entity.status.update(vp, entity.pointer, base);
+        // entity.status.update(vp, entity.pointer, base);
 
         // println!("status -> {:?}", entity.status);
-        let mut Vh2s: Vec<Pos2> = Vec::new();
         let start_time = Instant::now();
         local_player.update_view_matrix(vp);
+/*        for pos in data.cache_data.get_players_bones_position(vp) {
+
+            println!("pos1 -> {:?}", pos);
+            println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
+        };*/
+
+        let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
+            .iter()
+            .map(|pos| world_to_screen(local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))
+            .collect();
         // entity.update_bone_position(vp);
-        let h2s = world_to_screen(local_player.view_matrix, entity.hitbox.head.position, Pos2::new(2560.0, 1440.0));
-        // let h2s = player_head(vp, base);
-        Vh2s.push(h2s);
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
         println!("Loop time -> {:?}", elapsed_time);
 
         // println!("{:?}", se);
-        sender.send(Vh2s.clone()).expect("TODO: panic message");
+        sender.send(vh2s.clone()).expect("TODO: panic message");
         sleep(Duration::from_micros(100));
     }
 }
