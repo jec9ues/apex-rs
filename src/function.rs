@@ -8,7 +8,7 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::u8;
 use std::default::Default;
-use log::debug;
+use log::{debug, info};
 use memprocfs::*;
 use pretty_hex::*;
 
@@ -154,14 +154,14 @@ pub fn item_glow(vp: VmmProcess, addr: u64) {
     // write_u64(vp, (chunk_u64 + 0x02f0) as u64, 1363184265); // loba-style m_highlightFunctionBits
 }
 
-pub fn im_player_glow(vp: VmmProcess, addr: u64) {
+pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
     let entity_list: u64 = addr + CL_ENTITYLIST;
     let end = entity_list + (60 << 5);
     let area = (60 << 5);
 
     let data = read_mem(vp, entity_list, area );
     let mut array: Vec<u64> = Vec::new();
-    println!("start -> {:x} end -> {:x}", entity_list, end);
+    // println!("start -> {:x} end -> {:x}", entity_list, end);
 // 定义块的大小（32个字节）
     let chunk_size = 32;
 
@@ -175,12 +175,34 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64) {
         // 取每组的前8个字节
         let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().expect("Chunk has unexpected length"));
         if chunk_u64 == 0 { continue; }
-        println!("{:x}", chunk_u64);
+        // println!("{:x}", chunk_u64);
         array.push(chunk_u64);
-        // let name = read_string(vp, chunk_u64 + SIGN_NAME as u64);
-        // println!("num -> {} chunk_64 -> {:x} name -> {}", i, chunk_u64, name);
-        // info!("{}", read_u64(vp, chunk_u64 + 0x16A0));
-        // info!("{:?}", read_mem(vp, chunk_u64 + 0x16A0, 32).hex_dump());
+        write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
+        write_u8(vp, chunk_u64 + 0x270,  x);
+        write_u8(vp, chunk_u64 + GLOW_ENABLE,  x);
+        write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4,  0);
+
+        // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 , 0.0);
+        // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 + 0x4, 20.0);
+        // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 + 0x8, 10.0);
+
+        // write_mem(vp, chunk_u64 + GLOW_TYPE, [101, 102, 96, 75].to_vec());
+        // info!("BOT -> {:?}", read_mem(vp, chunk_u64 + GLOW_COLOR + 0x40 , 0x50).hex_dump());
+        let team_num = read_u64(vp, (chunk_u64 + TEAM_NUM) as u64);
+        if team_num == 97 {
+            // write_u8(vp, chunk_u64 + GLOW_ENABLE, 7);
+            // write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 2);
+            // write_mem(vp, chunk_u64 + GLOW_TYPE, [101, 102, 96, 75].to_vec());
+
+            // let name = read_string(vp, chunk_u64 + SIGN_NAME as u64);
+            // println!("num -> {} chunk_64 -> {:x} name -> {}", i, chunk_u64, name);
+            // info!("{}", read_u64(vp, chunk_u64 + 0x16A0));
+
+            //
+
+        }
+
+
     }
 }
 

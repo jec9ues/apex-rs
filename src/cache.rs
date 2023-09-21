@@ -20,6 +20,10 @@ pub struct CacheData {
     cache_low: HashMap<u64, Player>,
     cache_static: HashMap<u64, Player>,
 }
+
+impl CacheData {
+
+}
 pub fn initialize_match(vp: VmmProcess, base: u64) {
     let mut cache_data = CacheData::default();
     let player_pointer = get_player_pointer(vp, base + CL_ENTITYLIST);

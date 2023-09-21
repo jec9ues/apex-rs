@@ -193,13 +193,17 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
     entity.update_pointer(vp);
     entity.update_bone_index(vp);
 
+
+
     loop {
+
         entity.status.update(vp, entity.pointer, base);
-        println!("status -> {:?}", entity.status);
+
+        // println!("status -> {:?}", entity.status);
         let mut Vh2s: Vec<Pos2> = Vec::new();
         let start_time = Instant::now();
         local_player.update_view_matrix(vp);
-        entity.update_bone_position(vp);
+        // entity.update_bone_position(vp);
         let h2s = world_to_screen(local_player.view_matrix, entity.hitbox.head.position, Pos2::new(2560.0, 1440.0));
         // let h2s = player_head(vp, base);
         Vh2s.push(h2s);

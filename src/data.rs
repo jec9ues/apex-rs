@@ -1,6 +1,7 @@
 use std::mem::size_of;
 use std::ptr::addr_of;
 use std::thread::sleep;
+use egui_backend::egui::Painter;
 use egui_render_three_d::three_d::ColorTexture::Single;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
@@ -19,7 +20,7 @@ pub struct Player {
 }
 
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug,Copy, Clone, Default)]
 pub struct Hitbox {
     pub head: Bone,
     pub neck: Bone,
@@ -81,8 +82,15 @@ impl Status {
         self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
         self.dead = read_u16(vp, addr + LIFE_STATE);
         let name_index = read_u16(vp, addr + NAME_INDEX);
-        println!("name_index -> {}", name_index);
-        // let name_ptr = read_u64(vp, base + NAME_LIST + (i - 1) * 0x10);
+        // println!("name_index -> {}", name_index);
+
+        // println!("{:?}", read_mem(vp, name_ptr, 1000).hex_dump());
+        for i in 1..61 {
+            let name_ptr = read_u64(vp, base + NAME_LIST + (i - 1) * 0x10);
+            self.name = read_string(vp, name_ptr);
+            // println!("name {i} -> {}", self.name)
+        }
+
 
     }
 }
@@ -117,23 +125,11 @@ impl Player {
     pub fn update_pointer(&mut self, vp: VmmProcess) {
         self.bone_pointer = read_u64(vp, self.pointer + BONE);
     }
-    /// addr -> entity pointer
 
-    /*    pub fn update_bone_position(&mut self, vp: VmmProcess) {
-            let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-            const BUFFER_SIZE: u64 = size_of::<f32>() as u64;
-            let matrix: [[f32; 4]; 3] = read_f32_vec(vp, self.bone_pointer + self.hitbox.head.index as u64 * (12 * BUFFER_SIZE), 12)
-                .chunks_exact(4)
-                .map(|chunk| chunk.try_into().unwrap())
-                .collect::<Vec<[f32; 4]>>()
-                .try_into()
-                .unwrap();
-            self.hitbox.head.position = Pos3 {
-                x: matrix[0][3] + vec_abs_origin[0],
-                y: matrix[1][3] + vec_abs_origin[1],
-                z: matrix[2][3] + vec_abs_origin[2],
-            }
-        }*/
+    /// ptr -> painter
+/*    pub fn draw_bone(&self, ptr: Painter) {
+        ptr.line_segment()
+    }*/
 
     pub fn update_bone_index(&mut self, vp: VmmProcess) {
         let model_pointer = read_u64(vp, self.pointer + STUDIOHDR);
@@ -151,6 +147,7 @@ impl Player {
             .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
             .collect();
 
+        println!("{:?}", bone_index);
         self.hitbox.head.index = bone_index[0] as usize;
         self.hitbox.neck.index = bone_index[1] as usize;
         self.hitbox.upper_chest.index = bone_index[2] as usize;
