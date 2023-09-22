@@ -210,11 +210,12 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
                 };*/
         data.update_cache_high(vp);
         data.re_cache_pointer(vp);
-        if tick == 60 {
+        if tick % 10 == 0 {
             data.update_cache_medium(vp);
         }
-        if tick == 400 {
+        if tick % 20 == 0 {
             data.update_cache_low(vp);
+            tick = 0;
         }
         let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
             .iter()
@@ -224,10 +225,10 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>) {
         // entity.update_bone_position(vp);
         let elapsed_time = end_time.duration_since(start_time);
         println!("Loop time -> {:?}", elapsed_time);
-
-        println!("high -> {:?}", data.cache_pointer.cache_high);
-        println!("medium -> {:?}", data.cache_pointer.cache_medium);
-        println!("low -> {:?}", data.cache_pointer.cache_low);
+        println!("matrix -> {:?}", data.cache_data.local_player.view_matrix);
+        // println!("high -> {:?}", data.cache_pointer.cache_high);
+        // println!("medium -> {:?}", data.cache_pointer.cache_medium);
+        // println!("low -> {:?}", data.cache_pointer.cache_low);
         sender.send(vh2s.clone()).expect("TODO: panic message");
         sleep(Duration::from_micros(10));
         tick += 1

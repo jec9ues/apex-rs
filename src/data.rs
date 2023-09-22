@@ -226,10 +226,10 @@ impl Player {
 
 
         // float: 4 * matrix: 12 * bone: 200
-        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 230);
+        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 240);
         // println!("{:?}", data.hex_dump());
 
-        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 230);
+        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 240);
 
         for chunk in data.chunks_exact(4) {
             let mut array: [u8; 4] = [0; 4];
@@ -255,9 +255,7 @@ impl Player {
                 matrix
             })
             .collect();
-
-
-
+        // println!("name -> {}", self.status.name);
         self.hitbox.head.position = Pos3 {
             x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
             y: matrix[self.hitbox.head.index][1][3] + vec_abs_origin[1],

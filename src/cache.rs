@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use memprocfs::VmmProcess;
 use crate::constants::offsets::*;
 use crate::data::*;
@@ -82,14 +82,14 @@ impl Data {
             };*/
             self.cache_pointer.cache_high.push(pointer[1]);
             self.cache_data.players.insert(pointer[1], player);
-            println!("init -> {:?}", self.cache_pointer.cache_high);
         }
+        println!("{}", self.cache_pointer.cache_high.len());
     }
 
     pub fn update_cache_high(&mut self, vp: VmmProcess) {
         for pointer in &mut self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                player.status.update(vp, &player.pointer);
+                // player.status.update(vp, &player.pointer);
                 player.update_position(vp);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
@@ -100,7 +100,7 @@ impl Data {
     pub fn update_cache_medium(&mut self, vp: VmmProcess) {
         for pointer in &mut self.cache_pointer.cache_medium {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                player.status.update(vp, &player.pointer);
+                // player.status.update(vp, &player.pointer);
                 player.update_position(vp);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
@@ -111,7 +111,7 @@ impl Data {
     pub fn update_cache_low(&mut self, vp: VmmProcess) {
         for pointer in &mut self.cache_pointer.cache_low {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                player.status.update(vp, &player.pointer);
+                // player.status.update(vp, &player.pointer);
                 player.update_position(vp);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
@@ -122,11 +122,9 @@ impl Data {
         let mut high_remove = Vec::new(); // 用于存储需要删除的元素
         let mut medium_remove = Vec::new(); // 用于存储需要删除的元素
         let mut low_remove = Vec::new(); // 用于存储需要删除的元素
-        let mut items_to_remove = HashSet::new();
-
         for pointer in &mut self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get(&pointer) {
-                if player.distance > 50.0 {
+                if player.distance > 100.0 {
                     self.cache_pointer.cache_low.push(player.pointer);
                     high_remove.push(player.pointer);
                 }
@@ -142,7 +140,7 @@ impl Data {
 
         for pointer in &mut self.cache_pointer.cache_medium {
             if let Some(player) = self.cache_data.players.get(&pointer) {
-                if player.distance < 50.0 && player.status.knocked == 0{
+                if player.distance < 100.0 && player.status.knocked == 0{
                     self.cache_pointer.cache_high.push(player.pointer);
                     medium_remove.push(player.pointer);
                 }
@@ -151,18 +149,23 @@ impl Data {
 
         for pointer in &mut self.cache_pointer.cache_low {
             if let Some(player) = self.cache_data.players.get(&pointer) {
-                if player.distance < 50.0 && player.status.dead == 0{
+                // println!("distance -> {} dead -> {}", player.distance, player.status.dead);
+                if player.distance < 100.0 && player.status.dead == 0{
                     self.cache_pointer.cache_high.push(player.pointer);
                     low_remove.push(player.pointer);
                 }
             }
         }
-        for item in high_remove.iter().chain(medium_remove.iter()).chain(low_remove.iter()) {
-            items_to_remove.insert(*item);
+        for item in high_remove {
+            self.cache_pointer.cache_high.retain(|&x| x != item);
         }
-        self.cache_pointer.cache_high.retain(|&x| !items_to_remove.contains(&x));
-        self.cache_pointer.cache_medium.retain(|&x| !items_to_remove.contains(&x));
-        self.cache_pointer.cache_low.retain(|&x| !items_to_remove.contains(&x));
+        for item in medium_remove {
+            self.cache_pointer.cache_medium.retain(|&x| x != item);
+        }
+
+        for item in low_remove {
+            self.cache_pointer.cache_low.retain(|&x| x != item);
+        }
 
     }
 }

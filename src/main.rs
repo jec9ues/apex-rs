@@ -113,7 +113,7 @@ impl EguiOverlay for Menu {
 
 
         for i in &self.data {
-            box_2d(overlay.clone(), Pos2::new(i.x, i.y), 2.0, Color32::RED);
+            box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
         };
         if self.menu_on {
             egui_backend::egui::Window::new("controls").show(egui_context, |ui| {
