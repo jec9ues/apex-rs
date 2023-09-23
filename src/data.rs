@@ -1,9 +1,10 @@
-
+use egui_backend::egui::{Color32, Painter, Rect, Shape, Stroke};
+use egui_backend::egui::epaint::PathShape;
 use memprocfs::*;
 use crate::constants::offsets::*;
 use crate::egui_overlay::egui::Pos2;
 use crate::function::*;
-use crate::math::distance3d;
+use crate::math::{distance3d, world_to_screen};
 use crate::mem::*;
 
 #[derive(Debug, Clone, Default)]
@@ -18,7 +19,7 @@ pub struct Player {
 }
 
 
-#[derive(Debug,Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default)]
 pub struct Hitbox {
     pub head: Bone,
     pub neck: Bone,
@@ -44,6 +45,10 @@ pub struct Hitbox {
 pub struct Bone {
     pub index: usize,
     pub position: Pos3,
+    pub width: f32,
+    pub position_2d: Pos2,
+    pub left: Pos2,
+    pub right: Pos2,
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -62,9 +67,7 @@ impl Pos3 {
             y: value[1],
             z: value[2],
         }
-
     }
-
 }
 
 #[derive(Debug, Clone, Default)]
@@ -115,6 +118,7 @@ pub struct LocalPlayer {
     pub view_matrix: [[f32; 4]; 4],
     pub status: Status,
     pub position: Pos3,
+    pub camera_position: Pos3,
 }
 
 impl LocalPlayer {
@@ -145,7 +149,7 @@ impl Player {
     }
 
     /// ptr -> painter
-    pub fn get_bones_position(&self) -> Vec<Pos3>{
+    pub fn get_bones_position(&self) -> Vec<Pos3> {
         let mut res: Vec<Pos3> = Vec::new();
         let bones = [
             &self.hitbox.head.position,
@@ -168,18 +172,17 @@ impl Player {
             &self.hitbox.right_foot.position,
         ];
 
-// 使用迭代器将所有骨骼的位置添加到 res 中
         for bone in bones.iter() {
-
             res.push(**bone);
         };
         res
-
     }
+
+
 
     pub fn update_position(&mut self, vp: VmmProcess) {
         self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
-    }
+        }
 
     pub fn update_distance(&mut self, vp: VmmProcess, pos: &Pos3) {
         self.distance = distance3d(&self.position, pos)

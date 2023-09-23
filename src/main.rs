@@ -22,7 +22,9 @@ use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape
 use log4rs;
 use log::debug;
 use memprocfs::*;
+use crate::cache::Data;
 use crate::function::*;
+use crate::math::world_to_screen;
 use crate::mem::main_mem;
 
 
@@ -43,17 +45,18 @@ fn main() {
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
     let (sender, receiver) = unbounded::<Vec<Pos2>>();
+    let (data_sender, data_receiver) = unbounded::<Data>();
 
 
 
 
     let cheat = thread::spawn(move || {
-        main_mem(sender);
+        main_mem(sender, data_sender);
         }
     );
 
 
-    egui_overlay::start(Menu {data: Vec::new(), frame: 0, menu_on: true, last_frame_time: Instant::now(), fps: 0.0 , da: receiver});
+    egui_overlay::start(Menu {da2: data_receiver, re_data: Data::default(), data: Vec::new(), frame: 0, menu_on: true, last_frame_time: Instant::now(), fps: 0.0 , da: receiver});
     cheat.join().unwrap()
 }
 
@@ -64,6 +67,8 @@ pub struct Menu {
     pub fps: f32,
     pub da: Receiver<Vec<Pos2>>,
     pub data: Vec<Pos2>,
+    pub re_data: Data,
+    pub da2: Receiver<Data>,
 }
 
 impl EguiOverlay for Menu {
@@ -110,8 +115,14 @@ impl EguiOverlay for Menu {
             }
             Err(_) => { }
         };
-
-
+        match self.da2.try_recv() {
+            Ok(data) => {
+                // println!("Received message from thread {:?}", data);
+                self.re_data = data;
+            }
+            Err(_) => { }
+        };
+        self.re_data.draw_bones_width(overlay.clone());
         for i in &self.data {
             box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
         };
@@ -159,6 +170,7 @@ impl EguiOverlay for Menu {
         } else {
             glfw_backend.window.set_mouse_passthrough(true);
         }
+
         egui_context.request_repaint();
     }
 }

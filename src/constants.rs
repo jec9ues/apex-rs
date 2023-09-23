@@ -9,6 +9,8 @@ pub mod offsets {
     // ViewRender
     pub const VIEW_MATRIX: u64 = 0x11a350;
     // ViewMatrix
+    pub const CAMERA_POSITION: u64 = 0x1e90;
+    //[Miscellaneous] -> CPlayer!camera_origin
     pub const LEVEL_NAME: u64 = 0x16f71e0;
     // [Miscellaneous] -> LevelName
     pub const GLOW_COLOR: u64 = 0x200;

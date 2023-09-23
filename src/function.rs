@@ -40,7 +40,7 @@ pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
 }
 
 pub fn get_player_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
-    const SIZE: usize = (20 << 5);
+    const SIZE: usize = (60 << 5);
     // add (1 << 5) skip CWorld
     let data = read_mem(vp, addr, SIZE);
 
