@@ -51,6 +51,21 @@ pub struct Data {
 }
 
 impl Data {
+
+    pub fn get_near_pointer(&self) -> u64 {
+        let mut near_pointer: u64 = 0;
+        let mut last_distance: f32 = 0.0;
+        for pointer in &self.cache_pointer.cache_high {
+            if let Some(player) = self.cache_data.players.get(&pointer) {
+                println!("distance -> {}", player.distance);
+                if player.distance == 0.0 { continue };
+                if last_distance > player.distance {
+                    near_pointer = player.pointer;
+                }
+            }
+        }
+        near_pointer
+    }
     pub fn initialize(&mut self, vp: VmmProcess, base: u64) {
         //init data
         self.base = base;
@@ -64,7 +79,7 @@ impl Data {
             let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
             player.status.initialize(vp, pointer[1], self.base, pointer[0]);
             if player.status.team == self.cache_data.local_player.status.team {
-                continue
+                // continue
             };
             player.update_pointer(vp);
             player.update_bone_index(vp);

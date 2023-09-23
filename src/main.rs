@@ -5,6 +5,7 @@ pub mod function;
 pub mod math;
 pub mod data;
 pub mod cache;
+pub mod aimbot;
 
 
 use std::sync::Once;
@@ -18,6 +19,7 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape, Stroke, Key};
+use egui_backend::egui::plot::{Line, Plot, PlotPoints};
 
 use log4rs;
 use log::debug;
@@ -25,7 +27,8 @@ use memprocfs::*;
 use crate::cache::Data;
 use crate::function::*;
 use crate::math::world_to_screen;
-use crate::mem::main_mem;
+use crate::mem::*;
+use rand::Rng;
 
 
 fn box_2d(ptr: Painter, loc: Pos2, width: f32, color: Color32) {
@@ -47,11 +50,16 @@ fn main() {
     let (sender, receiver) = unbounded::<Vec<Pos2>>();
     let (data_sender, data_receiver) = unbounded::<Data>();
 
+    let (aimbot_send_data, aimbot_receive_data) = unbounded::<Data>();
 
 
+    thread::spawn(move || {
+
+
+    });
 
     let cheat = thread::spawn(move || {
-        main_mem(sender, data_sender);
+        main_mem(sender, data_sender, aimbot_send_data);
         }
     );
 
@@ -122,41 +130,36 @@ impl EguiOverlay for Menu {
             }
             Err(_) => { }
         };
-        self.re_data.draw_bones_width(overlay.clone());
+        println!("most far distance -> {}", self.re_data.get_near_pointer());
+        // self.re_data.draw_bones_width(overlay.clone());
         for i in &self.data {
             box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
         };
         if self.menu_on {
             egui_backend::egui::Window::new("controls").show(egui_context, |ui| {
-/*                let sin: PlotPoints = (0..1000).map(|i| {
-                    let x = i as f64 * 0.01;
+                let mut rng = rand::thread_rng();
+                let sin: PlotPoints = (0..1000).map(|i| {
+                    let x = i as f64 * 0.01 + 1.1;
                     [x, x.sin()]
                 }).collect();
                 let line = Line::new(sin);
-                Plot::new("my_plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));*/
+                Plot::new("flick_bot plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));
 
                 ui.set_width(300.0);
                 self.frame += 1;
+
+
                 glfw_backend.window.set_decorated(false);
                 ui.label(format!("current frame number: {}", self.frame));
                 ui.label(format!("current fps: {}", self.fps as u32));
-
-
-                ui.label(format!(
-                    "pixels_per_virtual_unit: {}",
-                    glfw_backend.physical_pixels_per_virtual_unit
-                ));
-                ui.label(format!("window scale: {}", glfw_backend.scale));
                 ui.label(format!("cursor pos x: {}", glfw_backend.cursor_pos[0]));
                 ui.label(format!("cursor pos y: {}", glfw_backend.cursor_pos[1]));
-
                 ui.label(format!(
                     "passthrough: {}",
                     glfw_backend.get_passthrough().unwrap()
                 ));
-                // how to change size.
-                // WARNING: don't use drag value, because window size changing while dragging ui messes things up.
             });
+
 
             egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
                 ui.set_width(300.0);

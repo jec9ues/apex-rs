@@ -156,7 +156,7 @@ pub fn write_f32(vp: VmmProcess, addr:u64, value: f32) {
 }*/
 
 
-pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>) {
+pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_send_data: Sender<Data>) {
     println!("DMA for Apex - START");
 
 
@@ -226,12 +226,13 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>) {
         let elapsed_time = end_time.duration_since(start_time);
         println!("Loop time -> {:?}", elapsed_time);
         // println!("matrix -> {:?}", data.cache_data.local_player.view_matrix);
-        println!("high -> {:?}", data.cache_pointer.cache_high);
-        println!("medium -> {:?}", data.cache_pointer.cache_medium);
-        println!("low -> {:?}", data.cache_pointer.cache_low);
+        // println!("high -> {:?}", data.cache_pointer.cache_high);
+        // println!("medium -> {:?}", data.cache_pointer.cache_medium);
+        // println!("low -> {:?}", data.cache_pointer.cache_low);
         sender.send(vh2s.clone()).expect("TODO: panic message");
         data_sender.send(data.clone()).expect("TODO: panic message");
-        println!("pos -> {:?}", data.cache_data.local_player.position);
+        aimbot_send_data.send(data.clone()).expect("TODO: panic message");
+        // println!("pos -> {:?}", data.cache_data.local_player.position);
         sleep(Duration::from_micros(1000));
         tick += 1
     }

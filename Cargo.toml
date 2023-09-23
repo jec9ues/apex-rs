@@ -18,4 +18,7 @@ nix = "*"
 log = "*"
 log4rs = "*"
 mouse-rs = "*"
+rand = "*"
+rdev = "*"
+
 
