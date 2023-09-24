@@ -51,3 +51,29 @@ pub fn calculate_desired_pitch(from: Pos3, to: Pos3) -> f32 {
     pitch_in_degrees
 }
 
+pub  fn flip_yaw_if_needed(angle: f32) -> f32 {
+    let mut my_angle = angle;
+    if my_angle > 180.0 {
+        my_angle = (360.0 - my_angle) * -1.0;
+    } else if my_angle < -180.0 {
+        my_angle = (360.0 + my_angle);
+    }
+    my_angle
+}
+
+pub fn calculate_angle_delta(old_angle: f32, new_angle: f32) -> f32 {
+    let way_a = new_angle - old_angle;
+    let mut way_b = 360.0 - way_a.abs();
+    if way_a > 0.0 && way_b > 0.0 {
+        way_b *= -1.0;
+    }
+
+    if way_a.abs() < way_b.abs() {
+        return way_a;
+    }
+    return way_b;
+}
+
+pub fn calculate_pitch_angle_delta(old_angle: f32, new_angle: f32) -> f32 {
+    new_angle - old_angle
+}

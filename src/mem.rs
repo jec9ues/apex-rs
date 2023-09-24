@@ -213,10 +213,14 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         data.re_cache_pointer(vp);
         data.cache_data.local_player.update_angle(vp);
         let target = data.get_near_player();
-        let pitch = calculate_desired_pitch(data.cache_data.local_player.position, target.hitbox.right_foot.position);
+        let pitch = calculate_desired_pitch(data.cache_data.local_player.position, target.position);
         let yaw = calculate_desired_yaw(data.cache_data.local_player.position, target.position);
         // data.cache_data.local_player.set_pitch(vp, pitch);
-        // data.cache_data.local_player.set_yaw(vp, 0.0);
+        let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
+        let angle_delta_abs = angle_delta.abs();
+
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta);
+        data.cache_data.local_player.set_yaw(vp, yaw);
         println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
         println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
         if tick % 3 == 0 {
@@ -242,7 +246,7 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         data_sender.send(data.clone()).expect("TODO: panic message");
         aimbot_send_data.send(data.clone()).expect("TODO: panic message");
         // println!("pos -> {:?}", data.cache_data.local_player.position);
-        sleep(Duration::from_micros(10000));
+        sleep(Duration::from_micros(10));
         tick += 1
     }
 }
