@@ -51,20 +51,20 @@ pub struct Data {
 }
 
 impl Data {
-
-    pub fn get_near_pointer(&self) -> u64 {
-        let mut near_pointer: u64 = 0;
+    //TODO: improve get player by distance, health, fov
+    pub fn get_near_player(&self) -> Player {
+        let mut near_player: &Player = &Default::default();
         let mut last_distance: f32 = 0.0;
         for pointer in &self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get(&pointer) {
-                println!("distance -> {}", player.distance);
                 if player.distance == 0.0 { continue };
-                if last_distance > player.distance {
-                    near_pointer = player.pointer;
+                println!("distance -> {}", player.distance);
+                if last_distance < player.distance {
+                    near_player = player;
                 }
             }
         }
-        near_pointer
+        near_player.clone()
     }
     pub fn initialize(&mut self, vp: VmmProcess, base: u64) {
         //init data
@@ -79,7 +79,7 @@ impl Data {
             let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
             player.status.initialize(vp, pointer[1], self.base, pointer[0]);
             if player.status.team == self.cache_data.local_player.status.team {
-                // continue
+                continue
             };
             player.update_pointer(vp);
             player.update_bone_index(vp);
@@ -113,6 +113,33 @@ impl Data {
                 player.update_position(vp);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
+                let mut bones = [
+                    &mut player.hitbox.head,
+                    &mut player.hitbox.neck,
+                    &mut player.hitbox.upper_chest,
+                    &mut player.hitbox.lower_chest,
+                    &mut player.hitbox.stomach,
+                    &mut player.hitbox.hip,
+                    &mut player.hitbox.left_shoulder,
+                    &mut player.hitbox.left_elbow,
+                    &mut player.hitbox.left_hand,
+                    &mut player.hitbox.right_shoulder,
+                    &mut player.hitbox.right_elbow,
+                    &mut player.hitbox.right_hand,
+                    &mut player.hitbox.left_thigh,
+                    &mut player.hitbox.left_knee,
+                    &mut player.hitbox.left_foot,
+                    &mut player.hitbox.right_thigh,
+                    &mut player.hitbox.right_knee,
+                    &mut player.hitbox.right_foot,
+                ];
+
+                for bone in bones.iter_mut() {
+                    bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
+                    bone.width = 10.0;
+                    bone.left = Pos2 {x: bone.position_2d.x - bone.width / 2.0, y: bone.position_2d.y};
+                    bone.right = Pos2 {x: bone.position_2d.x + bone.width / 2.0, y: bone.position_2d.y};
+                };
             }
         }
     }

@@ -29,8 +29,9 @@ use crate::function::*;
 use crate::math::world_to_screen;
 use crate::mem::*;
 use rand::Rng;
+use crate::aimbot::main_aimbot;
 
-
+// TODO: build drawer lib -> box; health, shield bar; weapon icon; name; rank api
 fn box_2d(ptr: Painter, loc: Pos2, width: f32, color: Color32) {
     // let draw = Rect::from_min_size(loc, Vec2::new(10.0, 20.0));
     ptr.circle(loc, 3.0, Color32::TRANSPARENT, Stroke::new(width, color))
@@ -44,7 +45,6 @@ fn box_2d(ptr: Painter, loc: Pos2, width: f32, color: Color32) {
 
 
 fn main() {
-    // TODO: loop memory to data struct; loop config(from egui) to run cheat; loop script to manage config(for egui);
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
     let (sender, receiver) = unbounded::<Vec<Pos2>>();
@@ -53,21 +53,21 @@ fn main() {
     let (aimbot_send_data, aimbot_receive_data) = unbounded::<Data>();
 
 
+/*    thread::spawn(move || {
+        main_aimbot(aimbot_receive_data);
+
+    });*/
+
     thread::spawn(move || {
-
-
-    });
-
-    let cheat = thread::spawn(move || {
         main_mem(sender, data_sender, aimbot_send_data);
         }
     );
 
 
     egui_overlay::start(Menu {da2: data_receiver, re_data: Data::default(), data: Vec::new(), frame: 0, menu_on: true, last_frame_time: Instant::now(), fps: 0.0 , da: receiver});
-    cheat.join().unwrap()
-}
 
+}
+// TODO: config channel
 pub struct Menu {
     pub frame: u64,
     pub menu_on: bool,
@@ -130,7 +130,7 @@ impl EguiOverlay for Menu {
             }
             Err(_) => { }
         };
-        println!("most far distance -> {}", self.re_data.get_near_pointer());
+        // println!("most far distance -> {}", self.re_data.get_near_pointer());
         // self.re_data.draw_bones_width(overlay.clone());
         for i in &self.data {
             box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);

@@ -65,4 +65,14 @@ pub mod offsets {
     // m_playerData + m_curZoomFOV
     pub const SEMI_AUTO: u64 = WEAPON_SETTING_BASE + 0x018c;
     // [WeaponSettingsMeta] is_semi_auto / m_isSemiAuto
+
+
+    pub const OFFSET_HIGHLIGHTSETTINGS: u64 = 0xb5f9620;
+    pub const OFFSET_HIGHLIGHTSERVERACTIVESTATES: u64 = 0x298;
+    pub const OFFSET_HIGHLIGHTCURRENTCONTEXTID: u64 = 0x294;
+    pub const OFFSET_HIGHLIGHTVISIBILITYTYPE: u64 = 0x278;
+
+    pub const VIEW_ANGLE: u64 = 0x24f4 - 0x14;
+    // [DataMap.C_Player] -> m_ammoPoolCapacity - 0x14
+    
 }

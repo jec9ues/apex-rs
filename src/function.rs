@@ -116,11 +116,11 @@ pub fn item_glow(vp: VmmProcess, addr: u64) {
     // println!("{:?}", array);
     // write_u64(vp, (chunk_u64 + 0x02f0) as u64, 1363184265); // loba-style m_highlightFunctionBits
 }
-
+/// addr -> base address
 pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
     let entity_list: u64 = addr + CL_ENTITYLIST;
-    let end = entity_list + (60 << 5);
-    let area = (60 << 5);
+    let end = entity_list + (15000 << 5);
+    let area = (15000 << 5);
 
     let data = read_mem(vp, entity_list, area);
     let mut array: Vec<u64> = Vec::new();
@@ -138,12 +138,14 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
         // 取每组的前8个字节
         let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().expect("Chunk has unexpected length"));
         if chunk_u64 == 0 { continue; }
-        // println!("{:x}", chunk_u64);
         array.push(chunk_u64);
-        write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
-        write_u8(vp, chunk_u64 + 0x270, 0);
-        write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
-        write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, x);
+        // write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
+        // write_u8(vp, chunk_u64 + 0x270, 0);
+        // write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
+        // write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, x);
+
+
+
 
         // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 , 0.0);
         // write_f32(vp, chunk_u64 + GLOW_COLOR + 0x40 + 0x4, 20.0);
@@ -152,7 +154,17 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
         // write_mem(vp, chunk_u64 + GLOW_TYPE, [101, 102, 96, 75].to_vec());
         // info!("BOT -> {:?}", read_mem(vp, chunk_u64 + GLOW_COLOR + 0x40 , 0x50).hex_dump());
         let team_num = read_u64(vp, (chunk_u64 + TEAM_NUM) as u64);
-        if team_num == 97 {
+        if true {
+            write_u32(vp, chunk_u64 + OFFSET_HIGHLIGHTCURRENTCONTEXTID, 0);  // context id to 1
+            write_u32(vp, chunk_u64 + OFFSET_HIGHLIGHTVISIBILITYTYPE, 2); // visibility to always
+            write_u8(vp, chunk_u64 + OFFSET_HIGHLIGHTSERVERACTIVESTATES, 200);  // maybe a rarely used settings
+
+            let highlightSettingsPtr = read_u64(vp, addr + OFFSET_HIGHLIGHTSETTINGS);
+            // println!("highlightSettingsPtr -> {:x}", highlightSettingsPtr);
+            write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 138, 70, 64].to_vec());
+            write_f32(vp, highlightSettingsPtr + 40 * 200 + 8, 0.0);
+            write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x4, 0.1);
+            write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x8, 0.1);
             // write_u8(vp, chunk_u64 + GLOW_ENABLE, 7);
             // write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 2);
             // write_mem(vp, chunk_u64 + GLOW_TYPE, [101, 102, 96, 75].to_vec());

@@ -199,6 +199,7 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
 
     loop {
         // entity.status.update(vp, entity.pointer, base);
+        // im_player_glow(vp, base, 0);
 
         // println!("status -> {:?}", entity.status);
         let start_time = Instant::now();
@@ -210,6 +211,14 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
                 };*/
         data.update_cache_high(vp);
         data.re_cache_pointer(vp);
+        data.cache_data.local_player.update_angle(vp);
+        let target = data.get_near_player();
+        let pitch = calculate_desired_pitch(data.cache_data.local_player.position, target.hitbox.right_foot.position);
+        let yaw = calculate_desired_yaw(data.cache_data.local_player.position, target.position);
+        // data.cache_data.local_player.set_pitch(vp, pitch);
+        // data.cache_data.local_player.set_yaw(vp, 0.0);
+        println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
+        println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
         if tick % 3 == 0 {
             data.update_cache_medium(vp);
         }
@@ -233,7 +242,7 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         data_sender.send(data.clone()).expect("TODO: panic message");
         aimbot_send_data.send(data.clone()).expect("TODO: panic message");
         // println!("pos -> {:?}", data.cache_data.local_player.position);
-        sleep(Duration::from_micros(1000));
+        sleep(Duration::from_micros(10000));
         tick += 1
     }
 }

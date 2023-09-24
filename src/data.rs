@@ -68,6 +68,13 @@ impl Pos3 {
             z: value[2],
         }
     }
+    pub fn to_pos2(&self) -> Pos2 {
+        Pos2 {
+            x: self.x,
+            y: self.y,
+
+        }
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -119,6 +126,8 @@ pub struct LocalPlayer {
     pub status: Status,
     pub position: Pos3,
     pub camera_position: Pos3,
+    pub pitch: f32,
+    pub yaw: f32,
 }
 
 impl LocalPlayer {
@@ -139,6 +148,17 @@ impl LocalPlayer {
             .collect::<Vec<[f32; 4]>>()
             .try_into()
             .unwrap();
+    }
+
+    pub fn update_angle(&mut self, vp: VmmProcess) {
+        self.pitch = read_f32(vp, self.pointer + VIEW_ANGLE);
+        self.yaw = read_f32(vp, self.pointer + VIEW_ANGLE + 0x4);
+    }
+    pub fn set_pitch(&mut self, vp: VmmProcess, pitch: f32) {
+        write_f32(vp, self.pointer + VIEW_ANGLE, pitch);
+    }
+    pub fn set_yaw(&mut self, vp: VmmProcess, yaw: f32) {
+        write_f32(vp, self.pointer + VIEW_ANGLE + 0x4, yaw);
     }
 }
 
