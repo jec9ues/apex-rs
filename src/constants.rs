@@ -9,6 +9,7 @@ pub mod offsets {
     // ViewRender
     pub const VIEW_MATRIX: u64 = 0x11a350;
     // ViewMatrix
+    pub const INPUT_SYSTEM: u64 = 0x1774cc0;
     pub const CAMERA_POSITION: u64 = 0x1e90;
     //[Miscellaneous] -> CPlayer!camera_origin
     pub const LEVEL_NAME: u64 = 0x16f71e0;

@@ -59,7 +59,7 @@ impl Data {
             if let Some(player) = self.cache_data.players.get(&pointer) {
                 if player.distance == 0.0 { continue };
                 println!("distance -> {}", player.distance);
-                if last_distance < player.distance {
+                if last_distance < player.distance && player.status.team != self.cache_data.local_player.status.team && player.status.dead > 0{
                     near_player = player;
                 }
             }
@@ -84,7 +84,7 @@ impl Data {
             player.update_pointer(vp);
             player.update_bone_index(vp);
 
-            player.update_position(vp);
+            player.update_position(vp, self.cache_data.local_player.view_matrix);
             player.update_distance(vp, &self.cache_data.local_player.position);
             player.update_bone_position(vp);
             // println!("distance -> {:?}", player.distance);
@@ -110,7 +110,7 @@ impl Data {
         for pointer in &mut self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
                 // player.status.update(vp, &player.pointer);
-                player.update_position(vp);
+                player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
                 let mut bones = [
@@ -147,7 +147,7 @@ impl Data {
         for pointer in &mut self.cache_pointer.cache_medium {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
                 // player.status.update(vp, &player.pointer);
-                player.update_position(vp);
+                player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
             }
@@ -157,7 +157,7 @@ impl Data {
         for pointer in &mut self.cache_pointer.cache_low {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
                 // player.status.update(vp, &player.pointer);
-                player.update_position(vp);
+                player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 player.update_bone_position(vp);
             }

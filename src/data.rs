@@ -1,5 +1,5 @@
-use egui_backend::egui::{Color32, Painter, Rect, Shape, Stroke};
-use egui_backend::egui::epaint::PathShape;
+use egui_backend::egui::{Color32, Painter, Rect, Rounding, Shape, Stroke};
+use egui_backend::egui::epaint::{PathShape, RectShape};
 use memprocfs::*;
 use crate::constants::offsets::*;
 use crate::egui_overlay::egui::Pos2;
@@ -15,6 +15,7 @@ pub struct Player {
     pub hitbox: Hitbox,
     pub status: Status,
     pub position: Pos3,
+    pub position_2d: Pos2,
     pub distance: f32,
 }
 
@@ -198,11 +199,22 @@ impl Player {
         res
     }
 
+    pub fn box_esp(&self, ptr: Painter) {
+        let height = self.hitbox.head.position_2d.y - self.position_2d.y;
+        let width = height * 0.5 / 2.0;
+        let left_top = Pos2::new(self.hitbox.head.position_2d.x - width, self.hitbox.head.position_2d.y);
+        let right_bottom = Pos2::new(self.position_2d.x, self.position_2d.y + width);
+        ptr.rect(
+            Rect::from_two_pos(left_top, right_bottom),
+            Rounding::same(1.0),
+            Color32::TRANSPARENT,
+            Stroke::new(2.0, Color32::WHITE));
+    }
 
-
-    pub fn update_position(&mut self, vp: VmmProcess) {
+    pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4]) {
         self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
-        }
+        self.position_2d = world_to_screen(matrix, self.position, Pos2 {x: 2560.0, y: 1440.0});
+    }
 
     pub fn update_distance(&mut self, vp: VmmProcess, pos: &Pos3) {
         self.distance = distance3d(&self.position, pos)
@@ -372,6 +384,10 @@ impl Player {
     }
 }
 
-
+pub fn get_button_state(mut button: i32, vp: VmmProcess, base: u64) -> i32 {
+    button = button + 1;
+    let a0 = read_i32(vp, base + INPUT_SYSTEM + ((button >> 5) * 4) as u64 + 0xb0);
+    return (a0 >> (button & 31)) & 1;
+}
 
 

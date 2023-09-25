@@ -57,6 +57,16 @@ pub fn read_u32(vp: VmmProcess, addr: u64) -> u32 {
     // println!("data: {:?} res: {}", data_read, res);
     res
 }
+
+pub fn read_i32(vp: VmmProcess, addr: u64) -> i32 {
+    const SIZE: usize = size_of::<i32>();
+
+    let data_read = read_mem(vp, addr, SIZE);
+
+    let res = i32::from_le_bytes(data_read.as_slice().to_owned().try_into().expect("Vec has unexpected length"));
+    // println!("data: {:?} res: {}", data_read, res);
+    res
+}
 pub fn read_u64(vp: VmmProcess, addr: u64) -> u64 {
     const SIZE: usize = size_of::<u64>();
 
@@ -219,8 +229,12 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
         let angle_delta_abs = angle_delta.abs();
 
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta);
-        data.cache_data.local_player.set_yaw(vp, yaw);
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 100.0);
+        if get_button_state(107, vp, base) == 1 {
+            data.cache_data.local_player.set_yaw(vp, new_yaw);
+        }
+
+        println!("button state -> {}", get_button_state(107, vp, base));
         println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
         println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
         if tick % 3 == 0 {
