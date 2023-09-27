@@ -203,12 +203,29 @@ impl Player {
         let height = self.hitbox.head.position_2d.y - self.position_2d.y;
         let width = height * 0.5 / 2.0;
         let left_top = Pos2::new(self.hitbox.head.position_2d.x - width, self.hitbox.head.position_2d.y);
+        let left_bottom = Pos2::new(self.position.x - width, self.position_2d.y);
         let right_bottom = Pos2::new(self.position_2d.x, self.position_2d.y + width);
+
+        // box esp
         ptr.rect(
             Rect::from_two_pos(left_top, right_bottom),
             Rounding::same(1.0),
             Color32::TRANSPARENT,
             Stroke::new(2.0, Color32::WHITE));
+
+        // health bar
+        ptr.rect(
+            Rect::from_two_pos(left_top - 2.0, left_bottom - 2.0),
+            Rounding::same(1.0),
+            Color32::GREEN,
+            Stroke::new(2.0, Color32::BLACK));
+
+        // shield bar
+        ptr.rect(
+            Rect::from_two_pos(left_top - 4.0, left_bottom - 4.0),
+            Rounding::same(1.0),
+            Color32::BLUE,
+            Stroke::new(2.0, Color32::BLACK));
     }
 
     pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4]) {

@@ -229,8 +229,8 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
         let angle_delta_abs = angle_delta.abs();
 
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 100.0);
-        if get_button_state(107, vp, base) == 1 {
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 40.0);
+        if get_button_state(108, vp, base) == 1 {
             data.cache_data.local_player.set_yaw(vp, new_yaw);
         }
 

@@ -59,7 +59,7 @@ impl Data {
             if let Some(player) = self.cache_data.players.get(&pointer) {
                 if player.distance == 0.0 { continue };
                 println!("distance -> {}", player.distance);
-                if last_distance < player.distance && player.status.team != self.cache_data.local_player.status.team && player.status.dead > 0{
+                if last_distance < player.distance && player.status.team != self.cache_data.local_player.status.team && player.status.dead == 0{
                     near_player = player;
                 }
             }
