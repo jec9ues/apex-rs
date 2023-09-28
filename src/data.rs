@@ -202,9 +202,15 @@ impl Player {
     pub fn box_esp(&self, ptr: Painter) {
         let height = self.hitbox.head.position_2d.y - self.position_2d.y;
         let width = height * 0.5 / 2.0;
+
         let left_top = Pos2::new(self.hitbox.head.position_2d.x - width, self.hitbox.head.position_2d.y);
-        let left_bottom = Pos2::new(self.position.x - width, self.position_2d.y);
         let right_bottom = Pos2::new(self.position_2d.x, self.position_2d.y + width);
+
+        let health_left_top = Pos2::new(self.hitbox.head.position_2d.x - width - 2.0, self.hitbox.head.position_2d.y);
+        let health_left_bottom = Pos2::new(self.position.x - width - 2.0, self.position_2d.y);
+
+        let shield_left_top = Pos2::new(self.hitbox.head.position_2d.x - width - 4.0, self.hitbox.head.position_2d.y);
+        let shield_left_bottom = Pos2::new(self.position.x - width - 4.0, self.position_2d.y);
 
         // box esp
         ptr.rect(
@@ -213,16 +219,18 @@ impl Player {
             Color32::TRANSPARENT,
             Stroke::new(2.0, Color32::WHITE));
 
+        //TODO: dynamic bar
+
         // health bar
         ptr.rect(
-            Rect::from_two_pos(left_top - 2.0, left_bottom - 2.0),
+            Rect::from_two_pos(health_left_top, health_left_bottom),
             Rounding::same(1.0),
             Color32::GREEN,
             Stroke::new(2.0, Color32::BLACK));
 
         // shield bar
         ptr.rect(
-            Rect::from_two_pos(left_top - 4.0, left_bottom - 4.0),
+            Rect::from_two_pos(shield_left_top, shield_left_bottom),
             Rounding::same(1.0),
             Color32::BLUE,
             Stroke::new(2.0, Color32::BLACK));

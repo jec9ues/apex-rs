@@ -8,6 +8,8 @@ pub mod cache;
 pub mod aimbot;
 
 
+
+use std::ops::RangeInclusive;
 use std::sync::Once;
 use egui_backend::{WindowBackend};
 use egui_overlay::EguiOverlay;
@@ -19,6 +21,7 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape, Stroke, Key};
+
 use egui_backend::egui::plot::{Line, Plot, PlotPoints};
 
 use log4rs;
@@ -64,7 +67,7 @@ fn main() {
     );
 
 
-    egui_overlay::start(Menu {da2: data_receiver, re_data: Data::default(), data: Vec::new(), frame: 0, menu_on: true, last_frame_time: Instant::now(), fps: 0.0 , da: receiver});
+    egui_overlay::start(Menu {size: [0.0; 2], da2: data_receiver, re_data: Data::default(), data: Vec::new(), frame: 0, menu_on: true, last_frame_time: Instant::now(), fps: 0.0 , da: receiver});
 
 }
 // TODO: config channel
@@ -77,6 +80,7 @@ pub struct Menu {
     pub data: Vec<Pos2>,
     pub re_data: Data,
     pub da2: Receiver<Data>,
+    pub size: [f32; 2],
 }
 
 impl EguiOverlay for Menu {
@@ -137,13 +141,13 @@ impl EguiOverlay for Menu {
         };
         if self.menu_on {
             egui_backend::egui::Window::new("controls").show(egui_context, |ui| {
-                let mut rng = rand::thread_rng();
+/*                let mut rng = rand::thread_rng();
                 let sin: PlotPoints = (0..1000).map(|i| {
                     let x = i as f64 * 0.01 + 1.1;
                     [x, x.sin()]
                 }).collect();
                 let line = Line::new(sin);
-                Plot::new("flick_bot plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));
+                Plot::new("flick_bot plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));*/
 
                 ui.set_width(300.0);
                 self.frame += 1;
@@ -163,7 +167,23 @@ impl EguiOverlay for Menu {
 
             egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
                 ui.set_width(300.0);
-                glfw_backend.window.set_decorated(false);
+                let mut changed = false;
+                ui.horizontal( |ui| {
+                    ui.label("screen width -> ");
+                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[0]));
+                });
+                ui.horizontal( |ui| {
+                    ui.label("screen height -> ");
+                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[1]));
+                });
+                if ui.button("apply").clicked() {
+                    changed = true;
+                }
+
+
+                if changed {
+                    glfw_backend.set_window_size([self.size[0] + 10.0, self.size[1]]);
+                }
             });
         }
 
@@ -177,5 +197,8 @@ impl EguiOverlay for Menu {
         egui_context.request_repaint();
     }
 }
+
+
+
 
 
