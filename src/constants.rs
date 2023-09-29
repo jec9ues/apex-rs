@@ -30,6 +30,15 @@ pub mod offsets {
     // [RecvTable.DT_Player] m_iHealth
     pub const MAX_HEALTH: u64 = 0x04a8;
     // [RecvTable.DT_Player] m_iMaxHealth
+    pub const HELMET_TYPE: u64 = 0x45c0;
+    // [RecvTable.DT_Player] m_helmetType=0x45c0
+    pub const ARMOR_TYPE: u64 = 0x45c4;
+    // [RecvTable.DT_Player] m_armorType=0x45c4
+    pub const CURRENT_FRAMEMODEL_INDEX: u64 = 0x00d8;
+    // [DataMap.C_BaseEntity] m_currentFrame.modelIndex=0x00d8
+
+    pub const LEGENDARY_MODEL_INDEX: u64 = 0x00d4;
+    // [RecvTableTypes.DT_WeaponPlayerData] m_legendaryModelIndex=0x00d4
     pub const SHIELD: u64 = 0x01a0;
     // [RecvTable.DT_TitanSoul] m_shieldHealth
     pub const MAX_SHIELD: u64 = 0x01a4;
@@ -56,6 +65,10 @@ pub mod offsets {
     // m_latestPrimaryWeapons
     pub const WEAPON_NAME: u64 = 0x1584;
     // [RecvTable.DT_WeaponX] -> m_weaponNameIndex
+    pub const PLAYER_DATA: u64 = 0x15f0;
+    // [RecvTable.DT_WeaponX] m_playerData=0x15f0
+    pub const LAST_TOSSED_GRENADE: u64 = 0x16d8;
+    // [RecvTable.DT_WeaponX] m_lastTossedGrenade=0x16d8
     pub const WEAPON_SETTING_BASE: u64 = 0x19c8;
     // [WeaponSettingsMeta] -> base
     pub const BULLET_SPEED: u64 = WEAPON_SETTING_BASE + 0x04d4;

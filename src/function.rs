@@ -208,7 +208,7 @@ pub fn item_loba_glow(vp: VmmProcess, base: u64) {
 
 
 /// addr -> local_player address
-pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) {
+pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) -> u16 {
     let mut weapon_handle = read_u64(vp, addr + WEAPON);
     weapon_handle &= 0xffff;
 
@@ -228,6 +228,7 @@ pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) {
     println!("zoom_fov -> {:?}", zoom_fov);
     println!("ammo -> {:?}", ammo);
     println!("semi_auto -> {:?}", semi_auto);
+    ammo
 }
 
 

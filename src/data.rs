@@ -1,11 +1,17 @@
-use egui_backend::egui::{Color32, Painter, Rect, Rounding, Shape, Stroke};
+use std::collections::HashMap;
+use std::ptr::write;
+use egui_backend::egui::{Align2, Color32, FontId, Painter, Rect, Rounding, Shape, Stroke, Vec2};
 use egui_backend::egui::epaint::{PathShape, RectShape};
+use egui_render_three_d::three_d::CoreError::ShaderCompilation;
+use log::info;
 use memprocfs::*;
+use pretty_hex::PrettyHex;
 use crate::constants::offsets::*;
 use crate::egui_overlay::egui::Pos2;
 use crate::function::*;
-use crate::math::{distance3d, world_to_screen};
+use crate::math::*;
 use crate::mem::*;
+use named_constants::named_constants;
 
 #[derive(Debug, Clone, Default)]
 pub struct Player {
@@ -86,6 +92,9 @@ pub struct Status {
     pub max_health: u16,
     pub shield: u16,
     pub max_shield: u16,
+    pub helmet_type: u16,
+    pub armor_type: u16,
+    pub skin: u16,
     pub team: u16,
     pub name: String,
 
@@ -96,11 +105,18 @@ impl Status {
     pub fn initialize(&mut self, vp: VmmProcess, addr: u64, base: u64, index: u64) {
         self.health = read_u16(vp, addr + HEALTH);
         self.max_health = read_u16(vp, addr + MAX_HEALTH);
+
         self.shield = read_u16(vp, addr + SHIELD);
         self.max_shield = read_u16(vp, addr + MAX_SHIELD);
+
+        self.armor_type = read_u16(vp, addr + ARMOR_TYPE);
+        self.helmet_type = read_u16(vp, addr + HELMET_TYPE);
+
+
         self.team = read_u16(vp, addr + TEAM_NUM);
-        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+
         self.dead = read_u16(vp, addr + LIFE_STATE);
+        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
         let name_ptr = read_u64(vp, base + NAME_LIST + (index - 1) * 0x10);
         self.name = read_string(vp, name_ptr);
         // println!("name {index} -> {}", self.name)
@@ -109,11 +125,21 @@ impl Status {
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
         self.health = read_u16(vp, addr + HEALTH);
         self.max_health = read_u16(vp, addr + MAX_HEALTH);
+
         self.shield = read_u16(vp, addr + SHIELD);
         self.max_shield = read_u16(vp, addr + MAX_SHIELD);
-        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+
+        self.armor_type = read_u16(vp, addr + ARMOR_TYPE);
+        self.helmet_type = read_u16(vp, addr + HELMET_TYPE);
+        self.skin = read_u16(vp, addr + CURRENT_FRAMEMODEL_INDEX);
+        // let player_data_ptr = read_u64(vp, addr + PLAYER_DATA);
+        // let player_datas = read_u16(vp, player_data_ptr + LEGENDARY_MODEL_INDEX);
+        // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
+
         self.dead = read_u16(vp, addr + LIFE_STATE);
-        // println!("name {index} -> {}", self.name)
+        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+        // info!("ptr -> {:x} data -> {} direct -> {:?}", player_data_ptr, player_datas, player_data.hex_dump())
+        info!("skin -> {}", self.skin)
     }
 }
 
@@ -139,7 +165,7 @@ impl LocalPlayer {
     }
 
     pub fn update_position(&mut self, vp: VmmProcess) {
-        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
+        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap());
     }
 
     pub fn update_view_matrix(&mut self, vp: VmmProcess) {
@@ -200,40 +226,67 @@ impl Player {
     }
 
     pub fn box_esp(&self, ptr: Painter) {
-        let height = self.hitbox.head.position_2d.y - self.position_2d.y;
-        let width = height * 0.5 / 2.0;
 
-        let left_top = Pos2::new(self.hitbox.head.position_2d.x - width, self.hitbox.head.position_2d.y);
-        let right_bottom = Pos2::new(self.position_2d.x, self.position_2d.y + width);
+        let mut body: Vec<Pos2> = Vec::new();
+        let mut leg: Vec<Pos2> = Vec::new();
+        let mut hand: Vec<Pos2> = Vec::new();
+        let bones = [
+            &self.hitbox.head.position_2d,
+            &self.hitbox.neck.position_2d,
+            &self.hitbox.upper_chest.position_2d,
+            &self.hitbox.lower_chest.position_2d,
+            &self.hitbox.stomach.position_2d,
+            &self.hitbox.hip.position_2d,
 
-        let health_left_top = Pos2::new(self.hitbox.head.position_2d.x - width - 2.0, self.hitbox.head.position_2d.y);
-        let health_left_bottom = Pos2::new(self.position.x - width - 2.0, self.position_2d.y);
+        ];
+        let bones2 = [
+            &self.hitbox.left_hand.position_2d,
+            &self.hitbox.left_elbow.position_2d,
+            &self.hitbox.left_shoulder.position_2d,
+            &self.hitbox.neck.position_2d,
+            &self.hitbox.right_shoulder.position_2d,
+            &self.hitbox.right_elbow.position_2d,
+            &self.hitbox.right_hand.position_2d,
 
-        let shield_left_top = Pos2::new(self.hitbox.head.position_2d.x - width - 4.0, self.hitbox.head.position_2d.y);
-        let shield_left_bottom = Pos2::new(self.position.x - width - 4.0, self.position_2d.y);
+        ];
 
-        // box esp
-        ptr.rect(
-            Rect::from_two_pos(left_top, right_bottom),
-            Rounding::same(1.0),
-            Color32::TRANSPARENT,
-            Stroke::new(2.0, Color32::WHITE));
+        let bones3 = [
+            &self.hitbox.left_foot.position_2d,
+            &self.hitbox.left_knee.position_2d,
+            &self.hitbox.left_thigh.position_2d,
+            &self.hitbox.hip.position_2d,
+            &self.hitbox.right_thigh.position_2d,
+            &self.hitbox.right_knee.position_2d,
+            &self.hitbox.right_foot.position_2d,
 
-        //TODO: dynamic bar
+        ];
 
-        // health bar
-        ptr.rect(
-            Rect::from_two_pos(health_left_top, health_left_bottom),
-            Rounding::same(1.0),
-            Color32::GREEN,
-            Stroke::new(2.0, Color32::BLACK));
+        for bone in bones.iter() {
+            body.push(**bone);
+        };
+        for bone in bones2.iter() {
+            hand.push(**bone);
+        };
+        for bone in bones3.iter() {
+            leg.push(**bone);
+        };
 
-        // shield bar
-        ptr.rect(
-            Rect::from_two_pos(shield_left_top, shield_left_bottom),
-            Rounding::same(1.0),
-            Color32::BLUE,
-            Stroke::new(2.0, Color32::BLACK));
+
+        ptr.add(
+            Shape::line(body,
+                        Stroke::new(2.0, Color32::WHITE)));
+        ptr.add(
+            Shape::line(hand,
+                        Stroke::new(2.0, Color32::WHITE)));
+        ptr.add(
+            Shape::line(leg,
+                        Stroke::new(2.0, Color32::WHITE)));
+        ptr.text(self.hitbox.head.position_2d,
+                 Align2::CENTER_BOTTOM,
+                 self.status.skin.to_string(),
+                 FontId::default(),
+                 Color32::WHITE);
+
     }
 
     pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4]) {
@@ -254,31 +307,56 @@ impl Player {
         let index_cache = read_u16(vp, hitbox_array + 0x4);
         let hitbox_index = (index_cache & 0xFFFE) << (4 * (index_cache & 1));
         // 19 is bone amount we need
-        let data = read_mem(vp, hitbox_index as u64 + hitbox_array, 19 * 0x20);
+        let data = read_mem(vp, hitbox_index as u64 + hitbox_array, 20 * 0x20);
         // println!("{:?}", data.hex_dump());
         let bone_index: Vec<u16> = data.chunks_exact(0x20)
             .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
             .collect();
 
         println!("{} -> {:?}", self.pointer, bone_index);
-        self.hitbox.head.index = bone_index[0] as usize;
-        self.hitbox.neck.index = bone_index[1] as usize;
-        self.hitbox.upper_chest.index = bone_index[2] as usize;
-        self.hitbox.lower_chest.index = bone_index[3] as usize;
-        self.hitbox.stomach.index = bone_index[4] as usize;
-        self.hitbox.hip.index = bone_index[5] as usize;
-        self.hitbox.left_shoulder.index = bone_index[6] as usize;
-        self.hitbox.left_elbow.index = bone_index[7] as usize;
-        self.hitbox.left_hand.index = bone_index[8] as usize;
-        self.hitbox.right_shoulder.index = bone_index[9] as usize;
-        self.hitbox.right_elbow.index = bone_index[10] as usize;
-        self.hitbox.right_hand.index = bone_index[11] as usize;
-        self.hitbox.left_thigh.index = bone_index[12] as usize;
-        self.hitbox.left_knee.index = bone_index[13] as usize;
-        self.hitbox.left_foot.index = bone_index[14] as usize;
-        self.hitbox.right_thigh.index = bone_index[16] as usize;
-        self.hitbox.right_knee.index = bone_index[17] as usize;
-        self.hitbox.right_foot.index = bone_index[18] as usize;
+
+        if self.status.skin == 576 ||  self.status.skin == 594 {
+            self.hitbox.head.index = bone_index[0] as usize;
+            self.hitbox.neck.index = bone_index[1] as usize;
+            self.hitbox.upper_chest.index = bone_index[2] as usize;
+            self.hitbox.lower_chest.index = bone_index[3] as usize;
+            self.hitbox.stomach.index = bone_index[4] as usize;
+            self.hitbox.hip.index = bone_index[5] as usize;
+            self.hitbox.left_shoulder.index = bone_index[6] as usize;
+            self.hitbox.left_elbow.index = bone_index[7] as usize;
+            self.hitbox.left_hand.index = bone_index[19] as usize;
+            self.hitbox.right_shoulder.index = bone_index[8] as usize;
+            self.hitbox.right_elbow.index = bone_index[9] as usize;
+            self.hitbox.right_hand.index = bone_index[10] as usize;
+            self.hitbox.left_thigh.index = bone_index[11] as usize;
+            self.hitbox.left_knee.index = bone_index[12] as usize;
+            self.hitbox.left_foot.index = bone_index[13] as usize;
+            self.hitbox.right_thigh.index = bone_index[15] as usize;
+            self.hitbox.right_knee.index = bone_index[16] as usize;
+            self.hitbox.right_foot.index = bone_index[17] as usize;
+        }
+        else {
+            self.hitbox.head.index = bone_index[0] as usize;
+            self.hitbox.neck.index = bone_index[1] as usize;
+            self.hitbox.upper_chest.index = bone_index[2] as usize;
+            self.hitbox.lower_chest.index = bone_index[3] as usize;
+            self.hitbox.stomach.index = bone_index[4] as usize;
+            self.hitbox.hip.index = bone_index[5] as usize;
+            self.hitbox.left_shoulder.index = bone_index[6] as usize;
+            self.hitbox.left_elbow.index = bone_index[7] as usize;
+            self.hitbox.left_hand.index = bone_index[8] as usize;
+            self.hitbox.right_shoulder.index = bone_index[9] as usize;
+            self.hitbox.right_elbow.index = bone_index[10] as usize;
+            self.hitbox.right_hand.index = bone_index[11] as usize;
+            self.hitbox.left_thigh.index = bone_index[12] as usize;
+            self.hitbox.left_knee.index = bone_index[13] as usize;
+            self.hitbox.left_foot.index = bone_index[14] as usize;
+            self.hitbox.right_thigh.index = bone_index[16] as usize;
+            self.hitbox.right_knee.index = bone_index[17] as usize;
+            self.hitbox.right_foot.index = bone_index[18] as usize;
+        }
+
+
     }
 
     pub fn update_bone_position(&mut self, vp: VmmProcess) {
@@ -416,3 +494,329 @@ pub fn get_button_state(mut button: i32, vp: VmmProcess, base: u64) -> i32 {
 }
 
 
+
+
+#[named_constants]
+#[repr(u8)]
+pub enum Item {
+    None,
+
+    // Weapon
+    R301,
+    Sentinel,
+    Bocek,
+    Alternator,
+    RE45,
+    ChargeRifle,
+    Devotion,
+    Longbow,
+    Havoc,
+    EVA8Auto,
+    Flatline,
+    Hemlok,
+    Kraber,
+    G7Scout,
+    LStar,
+    Mastiff,
+    Mozambique,
+    Prowler,
+    PK,
+    R99,
+    P2020,
+    Spitfire,
+    TripleTake,
+    Wingman,
+    Volt,
+    Repeater,
+    Rampage,
+    CAR,
+
+    // Ammo
+    LightRounds,
+    EnergyAmmo,
+    ShotgunShells,
+    HeavyRounds,
+    SniperAmmo,
+    Arrows,
+
+    // Meds
+    UltAccel,
+    PhoenixKit,
+    MedKit,
+    Syringe,
+    Battery,
+    ShieldCell,
+
+    // Equipment
+    HelmetLv1,
+    HelmetLv2,
+    HelmetLv3,
+    HelmetLv4,
+    BodyArmorLv1,
+    BodyArmorLv2,
+    BodyArmorLv3,
+    BodyArmorLv4,
+    EvoShieldLv0,
+    EvoShieldLv1,
+    EvoShieldLv2,
+    EvoShieldLv3,
+    EvoShieldLv4,
+    KnockdownShieldLv1,
+    KnockdownShieldLv2,
+    KnockdownShieldLv3,
+    KnockdownShieldLv4,
+    BackpackLv1,
+    BackpackLv2,
+    BackpackLv3,
+    BackpackLv4,
+
+    // Grenades
+    Thermite,
+    FragGrenade,
+    ArcStar,
+
+    // Sights
+    HcogClassic,
+    HcogBruiser,
+    HcogRanger,
+    Holo,
+    VariableHolo,
+    VariableAOG,
+    DigiThreat,
+    Sniper,
+    VariableSniper,
+    DigiSniperThreat,
+
+    // Attachments
+    BarrelStabilizerLv1,
+    BarrelStabilizerLv2,
+    BarrelStabilizerLv3,
+    BarrelStabilizerLv4,
+    LaserSightLv1,
+    LaserSightLv2,
+    LaserSightLv3,
+    LaserSightLv4,
+    LightMagazineLv1,
+    LightMagazineLv2,
+    LightMagazineLv3,
+    LightMagazineLv4,
+    HeavyMagazineLv1,
+    HeavyMagazineLv2,
+    HeavyMagazineLv3,
+    HeavyMagazineLv4,
+    EnergyMagazineLv1,
+    EnergyMagazineLv2,
+    EnergyMagazineLv3,
+    EnergyMagazineLv4,
+    SniperMagazineLv1,
+    SniperMagazineLv2,
+    SniperMagazineLv3,
+    SniperMagazineLv4,
+    ShotgunBoltLv1,
+    ShotgunBoltLv2,
+    ShotgunBoltLv3,
+    ShotgunBoltLv4,
+    StandardStockLv1,
+    StandardStockLv2,
+    StandardStockLv3,
+    SniperStockLv1,
+    SniperStockLv2,
+    SniperStockLv3,
+
+    // Hop-ups
+    EpicHopUp0,
+    EpicHopUp3,
+    LegendaryHopUp0,
+    LegendaryHopUp4,
+
+    // Misc
+    Keycard,
+    TreasurePack,
+    HeatShield,
+    MobileRespawn,
+    MrvnArm,
+    GoldenTicket,
+    BannerCrafting,
+}
+
+#[named_constants]
+#[derive(Default, Copy, Clone, Debug)]
+#[repr(u16)]
+pub enum Character {
+    Table,
+    Ash,
+    Ballistic,
+    Bangalore,
+    Bloodhound,
+    Catalyst,
+    Caustic,
+    Crypto,
+    Fuse,
+    Gibraltar,
+    Horizon,
+    Lifeline,
+    Loba,
+    MadMaggie,
+    Mirage,
+    Newcastle,
+    Octane,
+    Pathfinder,
+    Rampart,
+    Revenant,
+    Seer,
+    Valkyrie,
+    Vantage,
+    Wattson,
+    Wraith,
+    None,
+}
+#[derive(Default, Clone, Debug)]
+pub struct CharacterType {
+    pub table: HashMap<u16, Character>,
+}
+
+
+impl CharacterType {
+    pub fn initialize_character_type(&mut self) {
+        let ash: Vec<u16> = vec![1, 2];
+        for i in &ash {
+            self.table.insert(*i, Character::Ash);
+        }
+
+        // 初始化 Ballistic 的值
+        let ballistic: Vec<u16> = vec![3, 4];
+        for i in &ballistic {
+            self.table.insert(*i, Character::Ballistic);
+        }
+
+        // 初始化 Bangalore 的值
+        let bangalore: Vec<u16> = vec![5, 6];
+        for i in &bangalore {
+            self.table.insert(*i, Character::Bangalore);
+        }
+
+        // 初始化 Bloodhound 的值
+        let bloodhound: Vec<u16> = vec![7, 8];
+        for i in &bloodhound {
+            self.table.insert(*i, Character::Bloodhound);
+        }
+
+        // 初始化 Catalyst 的值
+        let catalyst: Vec<u16> = vec![9, 10];
+        for i in &catalyst {
+            self.table.insert(*i, Character::Catalyst);
+        }
+
+        // 初始化 Caustic 的值
+        let caustic: Vec<u16> = vec![11, 12];
+        for i in &caustic {
+            self.table.insert(*i, Character::Caustic);
+        }
+
+        // 初始化 Crypto 的值
+        let crypto: Vec<u16> = vec![13, 14];
+        for i in &crypto {
+            self.table.insert(*i, Character::Crypto);
+        }
+
+        // 初始化 Horizon 的值
+        let horizon: Vec<u16> = vec![15, 16];
+        for i in &horizon {
+            self.table.insert(*i, Character::Horizon);
+        }
+
+        // 初始化 Lifeline 的值
+        let lifeline: Vec<u16> = vec![17, 18];
+        for i in &lifeline {
+            self.table.insert(*i, Character::Lifeline);
+        }
+
+        // 初始化 Loba 的值
+        let loba: Vec<u16> = vec![19, 20];
+        for i in &loba {
+            self.table.insert(*i, Character::Loba);
+        }
+
+        // 初始化 MadMaggie 的值
+        let madmaggie: Vec<u16> = vec![21, 22];
+        for i in &madmaggie {
+            self.table.insert(*i, Character::MadMaggie);
+        }
+
+        // 初始化 Mirage 的值
+        let mirage: Vec<u16> = vec![23, 24];
+        for i in &mirage {
+            self.table.insert(*i, Character::Mirage);
+        }
+
+        // 初始化 Newcastle 的值
+        let newcastle: Vec<u16> = vec![25, 26];
+        for i in &newcastle {
+            self.table.insert(*i, Character::Newcastle);
+        }
+
+        // 初始化 Octane 的值
+        let octane: Vec<u16> = vec![27, 28];
+        for i in &octane {
+            self.table.insert(*i, Character::Octane);
+        }
+
+        // 初始化 Pathfinder 的值
+        let pathfinder: Vec<u16> = vec![29, 30];
+        for i in &pathfinder {
+            self.table.insert(*i, Character::Pathfinder);
+        }
+
+        // 初始化 Rampart 的值
+        let rampart: Vec<u16> = vec![31, 32];
+        for i in &rampart {
+            self.table.insert(*i, Character::Rampart);
+        }
+
+        // 初始化 Revenant 的值
+        let revenant: Vec<u16> = vec![33, 34];
+        for i in &revenant {
+            self.table.insert(*i, Character::Revenant);
+        }
+
+        // 初始化 Seer 的值
+        let seer: Vec<u16> = vec![35, 36];
+        for i in &seer {
+            self.table.insert(*i, Character::Seer);
+        }
+
+        // 初始化 Valkyrie 的值
+        let valkyrie: Vec<u16> = vec![37, 38];
+        for i in &valkyrie {
+            self.table.insert(*i, Character::Valkyrie);
+        }
+
+        // 初始化 Vantage 的值
+        let vantage: Vec<u16> = vec![39, 40];
+        for i in &vantage {
+            self.table.insert(*i, Character::Vantage);
+        }
+
+        // 初始化 Wattson 的值
+        let wattson: Vec<u16> = vec![41, 42];
+        for i in &wattson {
+            self.table.insert(*i, Character::Wattson);
+        }
+
+        // 初始化 Wraith 的值
+        let wraith: Vec<u16> = vec![43, 44];
+        for i in &wraith {
+            self.table.insert(*i, Character::Wraith);
+        }
+
+
+
+    }
+
+    pub fn check_character_type(&self, value: u16) -> Character {
+        match self.table.get(&value) {
+            Some(character) => *character,
+            None => Character::None,
+        }
+    }
+}

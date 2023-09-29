@@ -66,6 +66,8 @@ impl Data {
         }
         near_player.clone()
     }
+
+
     pub fn initialize(&mut self, vp: VmmProcess, base: u64) {
         //init data
         self.base = base;
@@ -112,7 +114,9 @@ impl Data {
                 // player.status.update(vp, &player.pointer);
                 player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
+                player.update_bone_index(vp);
                 player.update_bone_position(vp);
+                player.status.update(vp, &player.pointer);
                 let mut bones = [
                     &mut player.hitbox.head,
                     &mut player.hitbox.neck,

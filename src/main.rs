@@ -96,7 +96,8 @@ impl EguiOverlay for Menu {
         // 使用 Once 标志来判断代码是否应该运行
         ONCE.call_once(|| {
             glfw_backend.set_window_position([0.,0.]);
-            glfw_backend.set_window_size([2570.0f32,1440.0f32]);
+            // self.size = [1920.0, 1080.0];
+            glfw_backend.set_window_size([2560.0f32,1600.0f32]);
             // println!("This code runs only once.");
         });
 
@@ -136,6 +137,9 @@ impl EguiOverlay for Menu {
         };
         // println!("most far distance -> {}", self.re_data.get_near_pointer());
         // self.re_data.draw_bones_width(overlay.clone());
+        for player in &self.re_data.cache_data.players {
+            player.1.box_esp(overlay.clone());
+        }
         for i in &self.data {
             box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
         };
@@ -167,23 +171,20 @@ impl EguiOverlay for Menu {
 
             egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
                 ui.set_width(300.0);
-                let mut changed = false;
                 ui.horizontal( |ui| {
                     ui.label("screen width -> ");
-                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[0]));
+                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[0]).speed(10.0));
                 });
                 ui.horizontal( |ui| {
                     ui.label("screen height -> ");
-                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[1]));
+                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[1]).speed(10.0));
+
                 });
-                if ui.button("apply").clicked() {
-                    changed = true;
-                }
 
+                // println!("size -> {:?}", self.size);
 
-                if changed {
-                    glfw_backend.set_window_size([self.size[0] + 10.0, self.size[1]]);
-                }
+                // glfw_backend.set_window_size(self.size);
+
             });
         }
 

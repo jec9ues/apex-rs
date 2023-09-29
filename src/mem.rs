@@ -3,7 +3,7 @@ extern crate core;
 
 use log4rs;
 use std::mem::size_of;
-use std::thread;
+use std::{thread, time};
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
@@ -14,6 +14,7 @@ use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
 use crate::math::*;
+use rdev::*;
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
     match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
@@ -144,6 +145,9 @@ pub fn write_u16(vp: VmmProcess, addr:u64, value: u16) {
 pub fn write_u32(vp: VmmProcess, addr:u64, value: u32) {
     write_mem(vp, addr, value.to_le_bytes().to_vec())
 }
+pub fn write_i32(vp: VmmProcess, addr:u64, value: i32) {
+    write_mem(vp, addr, value.to_le_bytes().to_vec())
+}
 pub fn write_u64(vp: VmmProcess, addr:u64, value: u64) {
     write_mem(vp, addr, value.to_le_bytes().to_vec())
 }
@@ -213,7 +217,6 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
 
         // println!("status -> {:?}", entity.status);
         let start_time = Instant::now();
-        data.cache_data.local_player.update_view_matrix(vp);
         /*        for pos in data.cache_data.get_players_bones_position(vp) {
 
                     println!("pos1 -> {:?}", pos);
@@ -221,6 +224,7 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
                 };*/
         data.update_cache_high(vp);
         data.re_cache_pointer(vp);
+        data.cache_data.local_player.update_view_matrix(vp);
         data.cache_data.local_player.update_angle(vp);
         let target = data.get_near_player();
         let pitch = calculate_desired_pitch(data.cache_data.local_player.position, target.position);
@@ -229,14 +233,37 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
         let angle_delta_abs = angle_delta.abs();
 
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 40.0);
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 20.0);
+
+        fn send(event_type: &EventType) {
+            let delay = time::Duration::from_millis(40);
+            match simulate(event_type) {
+                Ok(()) => (),
+                Err(SimulateError) => {
+                    println!("We could not send {:?}", event_type);
+                }
+            }
+            // Let ths OS catchup (at least MacOS)
+            thread::sleep(delay);
+        }
+
         if get_button_state(108, vp, base) == 1 {
+
+
+
+            // send(&EventType::ButtonPress(Button::Left));
+            // send(&EventType::ButtonRelease(Button::Left));
+            // send(&EventType::ButtonRelease(Button::Right));
+
+
+            // sleep(Duration::from_millis(30));
             data.cache_data.local_player.set_yaw(vp, new_yaw);
         }
 
-        println!("button state -> {}", get_button_state(107, vp, base));
-        println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
-        println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
+        // println!("button state -> {}", get_button_state(107, vp, base));
+        // println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
+        // println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
+
         if tick % 3 == 0 {
             data.update_cache_medium(vp);
         }

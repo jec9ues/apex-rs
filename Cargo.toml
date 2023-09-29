@@ -10,7 +10,7 @@ egui_backend = "*"
 egui_window_glfw_passthrough = "*"
 crossbeam-channel = "*"
 egui_render_three_d = "*"
-tracing-subscriber = { version = "*", features = ["env-filter"] }
+
 
 pretty-hex = "*"
 memprocfs = "*"
@@ -20,5 +20,7 @@ log4rs = "*"
 mouse-rs = "*"
 rand = "*"
 rdev = "*"
+named_constants = "*"
+ini_core = "*"
 
 
