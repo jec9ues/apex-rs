@@ -1,13 +1,11 @@
 use std::collections::HashMap;
-use std::ptr::write;
-use egui_backend::egui::{Align2, Color32, FontId, Painter, Rect, Rounding, Shape, Stroke, Vec2};
-use egui_backend::egui::epaint::{PathShape, RectShape};
-use egui_render_three_d::three_d::CoreError::ShaderCompilation;
-use log::info;
+use std::error::Error;
+use std::fmt::{Display, format, Formatter};
+use egui_backend::egui::*;
+use log::*;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
 use crate::constants::offsets::*;
-use crate::egui_overlay::egui::Pos2;
 use crate::function::*;
 use crate::math::*;
 use crate::mem::*;
@@ -23,6 +21,7 @@ pub struct Player {
     pub position: Pos3,
     pub position_2d: Pos2,
     pub distance: f32,
+    pub rate: f32,
 }
 
 
@@ -52,8 +51,8 @@ pub struct Hitbox {
 pub struct Bone {
     pub index: usize,
     pub position: Pos3,
-    pub width: f32,
     pub position_2d: Pos2,
+    pub width: f32,
     pub left: Pos2,
     pub right: Pos2,
 }
@@ -84,7 +83,7 @@ impl Pos3 {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq)]
 pub struct Status {
     pub dead: u16,
     pub knocked: u16,
@@ -94,9 +93,14 @@ pub struct Status {
     pub max_shield: u16,
     pub helmet_type: u16,
     pub armor_type: u16,
+    pub last_visible_time: f32,
+    pub last_crosshair_target_time: f32,
     pub skin: u16,
+    pub character: Character,
     pub team: u16,
+    pub team_index: u16,
     pub name: String,
+    pub platform_id: u64,
 
 }
 
@@ -114,32 +118,41 @@ impl Status {
 
 
         self.team = read_u16(vp, addr + TEAM_NUM);
+        self.team_index = read_u16(vp, addr + TEAM_MEMBER_INDEX);
 
         self.dead = read_u16(vp, addr + LIFE_STATE);
         self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
         let name_ptr = read_u64(vp, base + NAME_LIST + (index - 1) * 0x10);
         self.name = read_string(vp, name_ptr);
-        // println!("name {index} -> {}", self.name)
+        // println!("squad id -> {}", self.team_index)
+
     }
 
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
-        self.health = read_u16(vp, addr + HEALTH);
-        self.max_health = read_u16(vp, addr + MAX_HEALTH);
+        self.health = read_u16(vp, addr + HEALTH); // 0x036c
+        self.max_health = read_u16(vp, addr + MAX_HEALTH); // 0x04a8
 
-        self.shield = read_u16(vp, addr + SHIELD);
-        self.max_shield = read_u16(vp, addr + MAX_SHIELD);
+        self.shield = read_u16(vp, addr + SHIELD); // 0x01a0
+        self.max_shield = read_u16(vp, addr + MAX_SHIELD); // 0x01a4
 
-        self.armor_type = read_u16(vp, addr + ARMOR_TYPE);
-        self.helmet_type = read_u16(vp, addr + HELMET_TYPE);
-        self.skin = read_u16(vp, addr + CURRENT_FRAMEMODEL_INDEX);
+        self.armor_type = read_u16(vp, addr + ARMOR_TYPE); // 0x45c4
+        self.helmet_type = read_u16(vp, addr + HELMET_TYPE); // 0x45c0
+        self.skin = read_u16(vp, addr + CURRENT_FRAMEMODEL_INDEX); // 0x00d8
         // let player_data_ptr = read_u64(vp, addr + PLAYER_DATA);
         // let player_datas = read_u16(vp, player_data_ptr + LEGENDARY_MODEL_INDEX);
         // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
-
-        self.dead = read_u16(vp, addr + LIFE_STATE);
-        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+        self.last_visible_time = read_f32(vp, addr + LAST_VISIBLE_TIME); // 0x19B0
+        self.last_crosshair_target_time = read_f32(vp, addr + LAST_VISIBLE_TIME + 0x8); // 0x19B0
+        self.dead = read_u16(vp, addr + LIFE_STATE); // 0x06c8
+        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE); // 0x26a0
+        let mut da = CharacterType::default();
+        da.initialize_character_type();
+        self.character = da.check_character_type(self.skin);
+        self.platform_id = read_u64(vp, addr + PLATFORM_USER_ID); // 0x2508
+        // let da = read_mem(vp, addr + LAST_VISIBLE_TIME, 0x30);
         // info!("ptr -> {:x} data -> {} direct -> {:?}", player_data_ptr, player_datas, player_data.hex_dump())
-        info!("skin -> {}", self.skin)
+        // info!("last visible time -> {}", self.last_visible_time);
+        // info!("data -> {:?}", da.hex_dump());
     }
 }
 
@@ -165,7 +178,7 @@ impl LocalPlayer {
     }
 
     pub fn update_position(&mut self, vp: VmmProcess) {
-        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap());
+        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
     }
 
     pub fn update_view_matrix(&mut self, vp: VmmProcess) {
@@ -189,7 +202,9 @@ impl LocalPlayer {
     }
 }
 
-
+pub enum DataError {
+    BoneError
+}
 impl Player {
     pub fn update_pointer(&mut self, vp: VmmProcess) {
         self.bone_pointer = read_u64(vp, self.pointer + BONE);
@@ -281,12 +296,34 @@ impl Player {
         ptr.add(
             Shape::line(leg,
                         Stroke::new(2.0, Color32::WHITE)));
-        ptr.text(self.hitbox.head.position_2d,
+/*        ptr.text(self.hitbox.head.position_2d,
                  Align2::CENTER_BOTTOM,
                  self.status.skin.to_string(),
                  FontId::default(),
                  Color32::WHITE);
+        ptr.text(self.hitbox.hip.position_2d,
+                 Align2::CENTER_BOTTOM,
+                 format!("{:?}", self.status.character),
+                 FontId::default(),
+                 Color32::LIGHT_RED);*/
+        ptr.text(self.hitbox.lower_chest.position_2d,
+                 Align2::CENTER_BOTTOM,
+                 format!("{:?}", self.status.last_visible_time),
+                 FontId::default(),
+                 Color32::BLUE);
 
+        ptr.text(self.hitbox.left_elbow.position_2d,
+                 Align2::CENTER_BOTTOM,
+                 format!("{:?}", self.status.last_crosshair_target_time),
+                 FontId::default(),
+                 Color32::RED);
+
+
+    }
+    pub fn target_line(&self, ptr: Painter) {
+        ptr.line_segment(
+            [self.hitbox.head.position_2d, Pos2::new(2560.0 / 2.0, 1440.0 / 2.0)],
+            Stroke::new(4.0, Color32::RED));
     }
 
     pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4]) {
@@ -313,9 +350,12 @@ impl Player {
             .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
             .collect();
 
-        println!("{} -> {:?}", self.pointer, bone_index);
+        // println!("{} -> {:?}", self.pointer, bone_index);
+/*        if bone_index.iter().any(|&x| x > 240) {
+            Err(DataError::BoneError)
+        };*/
 
-        if self.status.skin == 576 ||  self.status.skin == 594 {
+        if self.status.character == Character::Bloodhound {
             self.hitbox.head.index = bone_index[0] as usize;
             self.hitbox.neck.index = bone_index[1] as usize;
             self.hitbox.upper_chest.index = bone_index[2] as usize;
@@ -334,8 +374,7 @@ impl Player {
             self.hitbox.right_thigh.index = bone_index[15] as usize;
             self.hitbox.right_knee.index = bone_index[16] as usize;
             self.hitbox.right_foot.index = bone_index[17] as usize;
-        }
-        else {
+        } else {
             self.hitbox.head.index = bone_index[0] as usize;
             self.hitbox.neck.index = bone_index[1] as usize;
             self.hitbox.upper_chest.index = bone_index[2] as usize;
@@ -354,14 +393,13 @@ impl Player {
             self.hitbox.right_thigh.index = bone_index[16] as usize;
             self.hitbox.right_knee.index = bone_index[17] as usize;
             self.hitbox.right_foot.index = bone_index[18] as usize;
-        }
+        };
 
-
+        // Ok(())
     }
 
     pub fn update_bone_position(&mut self, vp: VmmProcess) {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-
 
         // float: 4 * matrix: 12 * bone: 200
         let data = read_mem(vp, self.bone_pointer, 4 * 12 * 240);
@@ -393,6 +431,7 @@ impl Player {
                 matrix
             })
             .collect();
+
         // println!("name -> {}", self.status.name);
         self.hitbox.head.position = Pos3 {
             x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
@@ -492,8 +531,6 @@ pub fn get_button_state(mut button: i32, vp: VmmProcess, base: u64) -> i32 {
     let a0 = read_i32(vp, base + INPUT_SYSTEM + ((button >> 5) * 4) as u64 + 0xb0);
     return (a0 >> (button & 31)) & 1;
 }
-
-
 
 
 #[named_constants]
@@ -639,9 +676,7 @@ pub enum Item {
     BannerCrafting,
 }
 
-#[named_constants]
-#[derive(Default, Copy, Clone, Debug)]
-#[repr(u16)]
+#[derive(Default, Copy, Clone, Debug, PartialEq)]
 pub enum Character {
     Table,
     Ash,
@@ -668,155 +703,52 @@ pub enum Character {
     Vantage,
     Wattson,
     Wraith,
+    #[default]
     None,
 }
+
 #[derive(Default, Clone, Debug)]
 pub struct CharacterType {
     pub table: HashMap<u16, Character>,
 }
 
-
 impl CharacterType {
     pub fn initialize_character_type(&mut self) {
-        let ash: Vec<u16> = vec![1, 2];
-        for i in &ash {
-            self.table.insert(*i, Character::Ash);
+        let character_data: [(Character, Vec<u16>); 23] = [
+            (Character::Ash, vec![1, 2]),
+            (Character::Ballistic, vec![3, 4]),
+            (Character::Bangalore, vec![5, 6]),
+            (Character::Bloodhound, vec![7, 8]),
+            (Character::Catalyst, vec![9, 10]),
+            (Character::Caustic, vec![11, 12]),
+            (Character::Crypto, vec![13, 14]),
+            (Character::Horizon, vec![15, 16]),
+            (Character::Lifeline, vec![17, 18]),
+            (Character::Loba, vec![19, 20]),
+            (Character::MadMaggie, vec![21, 22]),
+            (Character::Mirage, vec![23, 24]),
+            (Character::Newcastle, vec![25, 26]),
+            (Character::Octane, vec![27, 28]),
+            (Character::Pathfinder, vec![29, 30]),
+            (Character::Rampart, vec![31, 32]),
+            (Character::Revenant, vec![4173]),
+            (Character::Seer, vec![35, 36]),
+            (Character::Valkyrie, vec![37, 38]),
+            (Character::Vantage, vec![39, 40]),
+            (Character::Wattson, vec![41, 42]),
+            (Character::Wraith, vec![43, 44]),
+            (Character::None, Vec::new()),
+        ];
+
+        for (character, values) in &character_data {
+            for value in values {
+                self.table.insert(*value, *character);
+            }
         }
-
-        // 初始化 Ballistic 的值
-        let ballistic: Vec<u16> = vec![3, 4];
-        for i in &ballistic {
-            self.table.insert(*i, Character::Ballistic);
-        }
-
-        // 初始化 Bangalore 的值
-        let bangalore: Vec<u16> = vec![5, 6];
-        for i in &bangalore {
-            self.table.insert(*i, Character::Bangalore);
-        }
-
-        // 初始化 Bloodhound 的值
-        let bloodhound: Vec<u16> = vec![7, 8];
-        for i in &bloodhound {
-            self.table.insert(*i, Character::Bloodhound);
-        }
-
-        // 初始化 Catalyst 的值
-        let catalyst: Vec<u16> = vec![9, 10];
-        for i in &catalyst {
-            self.table.insert(*i, Character::Catalyst);
-        }
-
-        // 初始化 Caustic 的值
-        let caustic: Vec<u16> = vec![11, 12];
-        for i in &caustic {
-            self.table.insert(*i, Character::Caustic);
-        }
-
-        // 初始化 Crypto 的值
-        let crypto: Vec<u16> = vec![13, 14];
-        for i in &crypto {
-            self.table.insert(*i, Character::Crypto);
-        }
-
-        // 初始化 Horizon 的值
-        let horizon: Vec<u16> = vec![15, 16];
-        for i in &horizon {
-            self.table.insert(*i, Character::Horizon);
-        }
-
-        // 初始化 Lifeline 的值
-        let lifeline: Vec<u16> = vec![17, 18];
-        for i in &lifeline {
-            self.table.insert(*i, Character::Lifeline);
-        }
-
-        // 初始化 Loba 的值
-        let loba: Vec<u16> = vec![19, 20];
-        for i in &loba {
-            self.table.insert(*i, Character::Loba);
-        }
-
-        // 初始化 MadMaggie 的值
-        let madmaggie: Vec<u16> = vec![21, 22];
-        for i in &madmaggie {
-            self.table.insert(*i, Character::MadMaggie);
-        }
-
-        // 初始化 Mirage 的值
-        let mirage: Vec<u16> = vec![23, 24];
-        for i in &mirage {
-            self.table.insert(*i, Character::Mirage);
-        }
-
-        // 初始化 Newcastle 的值
-        let newcastle: Vec<u16> = vec![25, 26];
-        for i in &newcastle {
-            self.table.insert(*i, Character::Newcastle);
-        }
-
-        // 初始化 Octane 的值
-        let octane: Vec<u16> = vec![27, 28];
-        for i in &octane {
-            self.table.insert(*i, Character::Octane);
-        }
-
-        // 初始化 Pathfinder 的值
-        let pathfinder: Vec<u16> = vec![29, 30];
-        for i in &pathfinder {
-            self.table.insert(*i, Character::Pathfinder);
-        }
-
-        // 初始化 Rampart 的值
-        let rampart: Vec<u16> = vec![31, 32];
-        for i in &rampart {
-            self.table.insert(*i, Character::Rampart);
-        }
-
-        // 初始化 Revenant 的值
-        let revenant: Vec<u16> = vec![33, 34];
-        for i in &revenant {
-            self.table.insert(*i, Character::Revenant);
-        }
-
-        // 初始化 Seer 的值
-        let seer: Vec<u16> = vec![35, 36];
-        for i in &seer {
-            self.table.insert(*i, Character::Seer);
-        }
-
-        // 初始化 Valkyrie 的值
-        let valkyrie: Vec<u16> = vec![37, 38];
-        for i in &valkyrie {
-            self.table.insert(*i, Character::Valkyrie);
-        }
-
-        // 初始化 Vantage 的值
-        let vantage: Vec<u16> = vec![39, 40];
-        for i in &vantage {
-            self.table.insert(*i, Character::Vantage);
-        }
-
-        // 初始化 Wattson 的值
-        let wattson: Vec<u16> = vec![41, 42];
-        for i in &wattson {
-            self.table.insert(*i, Character::Wattson);
-        }
-
-        // 初始化 Wraith 的值
-        let wraith: Vec<u16> = vec![43, 44];
-        for i in &wraith {
-            self.table.insert(*i, Character::Wraith);
-        }
-
-
 
     }
 
     pub fn check_character_type(&self, value: u16) -> Character {
-        match self.table.get(&value) {
-            Some(character) => *character,
-            None => Character::None,
-        }
+        *self.table.get(&value).unwrap_or(&Character::None)
     }
 }

@@ -91,6 +91,8 @@ pub fn read_f32(vp: VmmProcess, addr: u64) -> f32 {
     res
 }
 
+
+
 pub fn read_f32_vec(vp: VmmProcess, addr: u64, amount: usize) -> Vec<f32> {
     const SIZE: usize = size_of::<f32>();
 
@@ -210,7 +212,8 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
     data.initialize(vp, base);
     data.cache_data.local_player.update_pointer(vp, base);
     let mut tick = 0;
-
+    let mut last_time = 0.0;
+    let mut last_vis = 0.0;
     loop {
         // entity.status.update(vp, entity.pointer, base);
         // im_player_glow(vp, base, 0);
@@ -223,20 +226,21 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
         data.update_cache_high(vp);
-        data.re_cache_pointer(vp);
+        // data.re_cache_pointer(vp);
         data.cache_data.local_player.update_view_matrix(vp);
         data.cache_data.local_player.update_angle(vp);
-        let target = data.get_near_player();
-        let pitch = calculate_desired_pitch(data.cache_data.local_player.position, target.position);
-        let yaw = calculate_desired_yaw(data.cache_data.local_player.position, target.position);
+        data.cache_data.target = data.get_near_crosshair_player();
+        let pitch = calculate_desired_pitch(data.cache_data.local_player.position, data.cache_data.target.hitbox.head.position);
+        let yaw = calculate_desired_yaw(data.cache_data.local_player.position, data.cache_data.target.hitbox.head.position);
         // data.cache_data.local_player.set_pitch(vp, pitch);
         let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
+        let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
         let angle_delta_abs = angle_delta.abs();
 
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 20.0);
-
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 15.0);
+        let new_pitch = data.cache_data.local_player.pitch + pitch_delta / 35.0;
         fn send(event_type: &EventType) {
-            let delay = time::Duration::from_millis(40);
+            let delay = time::Duration::from_millis(20);
             match simulate(event_type) {
                 Ok(()) => (),
                 Err(SimulateError) => {
@@ -246,19 +250,36 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
             // Let ths OS catchup (at least MacOS)
             thread::sleep(delay);
         }
+/*        for i in 109..200 {
+            if get_button_state(i, vp, base) == 1 { println!("{}", i)}
+        }*/
+        if true{
+            if get_button_state(110, vp, base) == 1 {
 
-        if get_button_state(108, vp, base) == 1 {
+                send(&EventType::ButtonPress(Button::Left));
+                send(&EventType::ButtonRelease(Button::Left));
+
+            }
+        };
+        last_time = data.cache_data.target.status.last_crosshair_target_time;
+        last_vis = data.cache_data.target.status.last_visible_time;
+        if true {
+            if get_button_state(107, vp, base) == 1 || get_button_state(108, vp, base) == 1{
+                data.cache_data.local_player.set_yaw(vp, new_yaw);
+                data.cache_data.local_player.set_pitch(vp, new_pitch);
+                // println!("pitch -> {}", pitch, new_pitch);
+                // send(&EventType::ButtonPress(Button::Left));
+                // send(&EventType::ButtonRelease(Button::Left));
+                // send(&EventType::ButtonRelease(Button::Right));
 
 
+                // sleep(Duration::from_millis(30));
 
-            // send(&EventType::ButtonPress(Button::Left));
-            // send(&EventType::ButtonRelease(Button::Left));
-            // send(&EventType::ButtonRelease(Button::Right));
-
-
-            // sleep(Duration::from_millis(30));
-            data.cache_data.local_player.set_yaw(vp, new_yaw);
+                // data.cache_data.local_player.set_yaw(vp, new_yaw);
+                // data.cache_data.local_player.set_pitch(vp, pitch);
+            }
         }
+
 
         // println!("button state -> {}", get_button_state(107, vp, base));
         // println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);

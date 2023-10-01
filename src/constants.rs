@@ -26,6 +26,10 @@ pub mod offsets {
     // Script_Highlight_SetFarFadeDist or m_highlightServerFadeEndTimes + 52(0x34)
     pub const TEAM_NUM: u64 = 0x037c;
     // [RecvTable.DT_BaseEntity] -> m_iTeamNum
+    pub const TEAM_MEMBER_INDEX: u64 = 0x0384;
+    // [RecvTable.DT_BaseEntity] -> m_teamMemberIndex=0x0384
+
+
     pub const HEALTH: u64 = 0x036c;
     // [RecvTable.DT_Player] m_iHealth
     pub const MAX_HEALTH: u64 = 0x04a8;
@@ -37,8 +41,8 @@ pub mod offsets {
     pub const CURRENT_FRAMEMODEL_INDEX: u64 = 0x00d8;
     // [DataMap.C_BaseEntity] m_currentFrame.modelIndex=0x00d8
 
-    pub const LEGENDARY_MODEL_INDEX: u64 = 0x00d4;
-    // [RecvTableTypes.DT_WeaponPlayerData] m_legendaryModelIndex=0x00d4
+    pub const LAST_VISIBLE_TIME: u64 = 0x19B0;
+    // //CPlayer!LAST_VISIBLE_TIME
     pub const SHIELD: u64 = 0x01a0;
     // [RecvTable.DT_TitanSoul] m_shieldHealth
     pub const MAX_SHIELD: u64 = 0x01a4;
@@ -47,6 +51,10 @@ pub mod offsets {
     // [RecvTable.DT_Player] -> m_lifeState
     pub const BLEED_OUT_STATE: u64 = 0x26a0;
     // [RecvTable.DT_Player] -> m_bleedoutState
+    pub const PLATFORM_USER_ID: u64 = 0x2508;
+    // [RecvTable.DT_Player] -> m_platformUserId=0x2508
+    pub const EADP_USER_ID: u64 = 0x2520;
+    // [RecvTable.DT_Player] -> m_EadpUserId=0x2520
     pub const STUDIOHDR: u64 = 0x1020;
     //CBaseAnimating!m_pStudioHdr
     pub const BONE: u64 = 0x0dd0 + 0x48;

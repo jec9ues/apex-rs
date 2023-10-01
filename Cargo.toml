@@ -22,5 +22,6 @@ rand = "*"
 rdev = "*"
 named_constants = "*"
 ini_core = "*"
+serde = "*"
 
 

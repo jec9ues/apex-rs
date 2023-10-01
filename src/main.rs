@@ -6,7 +6,7 @@ pub mod math;
 pub mod data;
 pub mod cache;
 pub mod aimbot;
-
+pub mod config;
 
 
 use std::ops::RangeInclusive;
@@ -97,7 +97,7 @@ impl EguiOverlay for Menu {
         ONCE.call_once(|| {
             glfw_backend.set_window_position([0.,0.]);
             // self.size = [1920.0, 1080.0];
-            glfw_backend.set_window_size([2560.0f32,1600.0f32]);
+            glfw_backend.set_window_size([2570.0f32,1440.0f32]);
             // println!("This code runs only once.");
         });
 
@@ -139,20 +139,15 @@ impl EguiOverlay for Menu {
         // self.re_data.draw_bones_width(overlay.clone());
         for player in &self.re_data.cache_data.players {
             player.1.box_esp(overlay.clone());
+            // player.1.target_line(overlay.clone());
         }
-        for i in &self.data {
-            box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
-        };
+        self.re_data.cache_data.target.target_line(overlay.clone());
+        // for i in &self.data {
+        //     box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
+        // };
         if self.menu_on {
-            egui_backend::egui::Window::new("controls").show(egui_context, |ui| {
-/*                let mut rng = rand::thread_rng();
-                let sin: PlotPoints = (0..1000).map(|i| {
-                    let x = i as f64 * 0.01 + 1.1;
-                    [x, x.sin()]
-                }).collect();
-                let line = Line::new(sin);
-                Plot::new("flick_bot plot").view_aspect(2.0).show(ui, |plot_ui| plot_ui.line(line));*/
 
+            egui_backend::egui::Window::new("Debug").show(egui_context, |ui| {
                 ui.set_width(300.0);
                 self.frame += 1;
 
@@ -180,12 +175,9 @@ impl EguiOverlay for Menu {
                     ui.add(egui_backend::egui::DragValue::new(&mut self.size[1]).speed(10.0));
 
                 });
-
-                // println!("size -> {:?}", self.size);
-
-                // glfw_backend.set_window_size(self.size);
-
             });
+
+
         }
 
         // here you decide if you want to be passthrough or not.

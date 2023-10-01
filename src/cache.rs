@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 use egui_backend::egui::*;
 use egui_backend::egui::epaint::PathShape;
+use egui_window_glfw_passthrough::glfw::WindowEvent::Pos;
 use memprocfs::VmmProcess;
+use crate::config::Config;
 use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
@@ -27,6 +29,7 @@ pub struct CachePtr {
 #[derive(Debug, Clone, Default)]
 pub struct CacheData {
     pub local_player: LocalPlayer,
+    pub target: Player,
     pub players: HashMap<u64, Player>,
 }
 impl CacheData {
@@ -48,6 +51,7 @@ pub struct Data {
     pub base: u64,
     pub cache_pointer: CachePtr,
     pub cache_data: CacheData,
+    // pub config: Config,
 }
 
 impl Data {
@@ -66,6 +70,26 @@ impl Data {
         }
         near_player.clone()
     }
+    pub fn get_near_crosshair_player(&self) -> Player {
+        let mut near_player: &Player = &Default::default();
+        let mut last_distance: f32 = 999.0;
+        for pointer in &self.cache_pointer.cache_high {
+            if let Some(player) = self.cache_data.players.get(&pointer) {
+                // println!("ptr -> {:?}", player.pointer);
+                // println!("head pos -> {:?}", player.hitbox.head.position_2d);
+                // println!("distance -> {}", player.distance);
+                if player.position_2d == Pos2::new(0.0, 0.0) { continue }
+                // if player.distance > 150.0 { continue }
+                let dis = distance2d(&Pos2::new(1280.0, 720.0), &player.position_2d);
+                if last_distance > dis  {
+                    last_distance = dis;
+                    near_player = player;
+                }
+            }
+        }
+        // println!("distance -> {}", near_player.status.platform_id);
+        near_player.clone()
+    }
 
 
     pub fn initialize(&mut self, vp: VmmProcess, base: u64) {
@@ -80,8 +104,12 @@ impl Data {
         for pointer in get_player_pointer_index(vp, base + CL_ENTITYLIST) {
             let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
             player.status.initialize(vp, pointer[1], self.base, pointer[0]);
-            if player.status.team == self.cache_data.local_player.status.team {
+            if player.status.team_index == self.cache_data.local_player.status.team_index && player.status.team == self.cache_data.local_player.status.team {
                 continue
+                // pass local player
+            }
+            if player.status.team == self.cache_data.local_player.status.team {
+                // continue
             };
             player.update_pointer(vp);
             player.update_bone_index(vp);
@@ -114,9 +142,9 @@ impl Data {
                 // player.status.update(vp, &player.pointer);
                 player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
-                player.update_bone_index(vp);
+                // player.update_bone_index(vp);
                 player.update_bone_position(vp);
-                player.status.update(vp, &player.pointer);
+                // player.status.update(vp, &player.pointer);
                 let mut bones = [
                     &mut player.hitbox.head,
                     &mut player.hitbox.neck,
