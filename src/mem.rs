@@ -157,19 +157,125 @@ pub fn write_f32(vp: VmmProcess, addr:u64, value: f32) {
     write_mem(vp, addr, value.to_le_bytes().to_vec())
 }
 
+pub fn write_f32_vec(vp: VmmProcess, addr:u64, value: Vec<f32>) {
+    write_mem(vp, addr, value
+        .iter()
+        .flat_map(|&f| f.to_le_bytes().to_vec())
+        .collect())
+}
 
-/*fn get_entity_by_id(vp: VmmProcess, ent: u32, addr: usize) -> u32 {
-    let id = read_int(vp, (addr + (ent << 5) as usize) as u64);
-    if id != 0 {
-        println!("id {}: {:x}", ent,id);
-        let data  = read_mem(vp, (addr + (ent << 5) as usize) as u64, size_of::<u64>());
-        // println!("addr: {:x} data: {:?}", (addr + (ent << 5) as usize) as u64, data.hex_dump());
-        id.try_into().unwrap_or_default()
+
+pub struct ContinuingData {
+    pub value: Vec<u8>,
+}
+impl ContinuingData {
+    pub fn new(value: Vec<u8>) -> Self {
+        ContinuingData { value }
     }
-    else {
-        0
+
+    pub fn read_u8(&self,  addr: usize) -> u8 {
+        const SIZE: usize = size_of::<u8>();
+
+        let slice = &self.value[addr..(addr + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u8::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
     }
-}*/
+    pub fn read_u16(&self, addr: u64) -> u16 {
+        const SIZE: usize = size_of::<u16>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u16::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_u32(&self, addr: u64) -> u32 {
+        const SIZE: usize = size_of::<u32>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u32::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+
+    pub fn read_i32(&self, addr: u64) -> i32 {
+        const SIZE: usize = size_of::<i32>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = i32::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_u64(&self, addr: u64) -> u64 {
+        const SIZE: usize = size_of::<u64>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u64::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_f32(&self, addr: u64) -> f32 {
+        const SIZE: usize = size_of::<f32>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = f32::from_le_bytes(bytes);
+
+        res
+    }
+
+
+
+    pub fn read_f32_vec(&self, addr: u64, amount: usize) -> Vec<f32> {
+        const SIZE: usize = size_of::<f32>();
+
+        let slice = &self.value[addr as usize..amount * (addr as usize + SIZE)];
+
+        let mut f32_values: Vec<f32> = Vec::with_capacity(amount);
+
+        for chunk in slice.chunks_exact(SIZE) {
+            let mut array: [u8; SIZE] = [0; SIZE];
+            array.copy_from_slice(chunk);
+            let f32_value = f32::from_le_bytes(array);
+            f32_values.push(f32_value);
+        }
+
+        f32_values
+    }
+
+    pub fn read_string(&self, addr: u64) -> String {
+        const SIZE: usize = 24; // 假设最大字符串长度为 32，可以根据实际情况调整
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        if let Some(zero_index) = bytes.iter().position(|&byte| byte == 0) {
+            // 如果找到第一个零字节，只取到第一个零字节之前的部分
+            let truncated_data = &bytes[..zero_index];
+            match String::from_utf8(truncated_data.to_vec()) {
+                Ok(s) => s, // 如果成功转换为 String，返回 String 值
+                Err(_) => String::new(), // 如果无法转换为有效的 UTF-8，返回空字符串或者其他错误处理方式
+            }
+        } else {
+            // 如果没有找到零字节，使用整个数据
+            match String::from_utf8(Vec::from(slice)) {
+                Ok(s) => s,
+                Err(_) => String::new(),
+            }
+        }
+    }
+}
 
 
 pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_send_data: Sender<Data>) {
@@ -225,20 +331,19 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
                     println!("pos1 -> {:?}", pos);
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
-        data.update_cache_high(vp);
+        data.update_cache_high(vp); // ~ 5ms
         // data.re_cache_pointer(vp);
-        data.cache_data.local_player.update_view_matrix(vp);
-        data.cache_data.local_player.update_angle(vp);
-        data.cache_data.target = data.get_near_crosshair_player();
-        let pitch = calculate_desired_pitch(data.cache_data.local_player.position, data.cache_data.target.hitbox.head.position);
-        let yaw = calculate_desired_yaw(data.cache_data.local_player.position, data.cache_data.target.hitbox.head.position);
+
+
+        let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.head.position);
+        let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.head.position);
         // data.cache_data.local_player.set_pitch(vp, pitch);
         let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
         let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
         let angle_delta_abs = angle_delta.abs();
 
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 15.0);
-        let new_pitch = data.cache_data.local_player.pitch + pitch_delta / 35.0;
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 5.0);
+        let new_pitch = data.cache_data.local_player.pitch + pitch_delta / 5.0;
         fn send(event_type: &EventType) {
             let delay = time::Duration::from_millis(20);
             match simulate(event_type) {
@@ -253,34 +358,28 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
 /*        for i in 109..200 {
             if get_button_state(i, vp, base) == 1 { println!("{}", i)}
         }*/
-        if true{
-            if get_button_state(110, vp, base) == 1 {
+
+        if data.key.get_key_state(InputSystem::MOUSE_RIGHT) == 1 {
+            data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
+/*            if get_button_state(110, vp, base) == 1 {
 
                 send(&EventType::ButtonPress(Button::Left));
                 send(&EventType::ButtonRelease(Button::Left));
 
-            }
+            }*/
         };
         last_time = data.cache_data.target.status.last_crosshair_target_time;
-        last_vis = data.cache_data.target.status.last_visible_time;
-        if true {
+
+        if last_vis != data.cache_data.target.status.last_visible_time{
             if get_button_state(107, vp, base) == 1 || get_button_state(108, vp, base) == 1{
-                data.cache_data.local_player.set_yaw(vp, new_yaw);
-                data.cache_data.local_player.set_pitch(vp, new_pitch);
-                // println!("pitch -> {}", pitch, new_pitch);
-                // send(&EventType::ButtonPress(Button::Left));
-                // send(&EventType::ButtonRelease(Button::Left));
-                // send(&EventType::ButtonRelease(Button::Right));
-
-
-                // sleep(Duration::from_millis(30));
-
                 // data.cache_data.local_player.set_yaw(vp, new_yaw);
-                // data.cache_data.local_player.set_pitch(vp, pitch);
+                // data.cache_data.local_player.set_pitch(vp, new_pitch);
+                data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
+
             }
         }
 
-
+        last_vis = data.cache_data.target.status.last_visible_time;
         // println!("button state -> {}", get_button_state(107, vp, base));
         // println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
         // println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
@@ -295,11 +394,10 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
             .iter()
             .map(|pos| world_to_screen(data.cache_data.local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))
-            .collect();
+            .collect(); // ~ 1.2 ms
         let end_time = Instant::now();
-        // entity.update_bone_position(vp);
         let elapsed_time = end_time.duration_since(start_time);
-        println!("Loop time -> {:?}", elapsed_time);
+        // println!("Loop time -> {:?}", elapsed_time);
         // println!("matrix -> {:?}", data.cache_data.local_player.view_matrix);
         // println!("high -> {:?}", data.cache_pointer.cache_high);
         // println!("medium -> {:?}", data.cache_pointer.cache_medium);

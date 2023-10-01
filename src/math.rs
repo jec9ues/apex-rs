@@ -39,7 +39,7 @@ pub fn calculate_desired_yaw(from: Pos3, to: Pos3) -> f32{
 }
 
 pub fn calculate_desired_pitch(from: Pos3, to: Pos3) -> f32 {
-    let location_delta_z = to.z - from.z - 60.0;
+    let location_delta_z = to.z - from.z;
     let distance_between_players = distance2d(
         &Pos2::new(to.x, to.y),
         &Pos2::new(from.x, from.y)

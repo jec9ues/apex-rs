@@ -51,7 +51,9 @@ pub struct Data {
     pub base: u64,
     pub cache_pointer: CachePtr,
     pub cache_data: CacheData,
+    pub key: KeyData,
     // pub config: Config,
+    // pub table: DataTable,
 }
 
 impl Data {
@@ -100,6 +102,9 @@ impl Data {
         self.cache_data.local_player.update_pointer(vp, self.base);
         self.cache_data.local_player.status.initialize(vp, self.cache_data.local_player.pointer, self.base, 1);
         self.cache_data.local_player.update_position(vp);
+        self.cache_data.local_player.update_bone_index(vp);
+        self.cache_data.local_player.update_bone_position(vp);
+
         // init other player
         for pointer in get_player_pointer_index(vp, base + CL_ENTITYLIST) {
             let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
@@ -137,6 +142,12 @@ impl Data {
     }
 
     pub fn update_cache_high(&mut self, vp: VmmProcess) {
+        self.cache_data.local_player.update_bone_position(vp);
+        self.cache_data.local_player.status.update_test(vp, &self.cache_data.local_player.pointer);
+        self.cache_data.local_player.update_view_matrix(vp); // 500 µs
+        self.cache_data.local_player.update_angle(vp); // 500 µs
+        self.cache_data.target =  self.get_near_crosshair_player();
+        self.key.update_key_state(vp, self.base);
         for pointer in &mut self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
                 // player.status.update(vp, &player.pointer);
@@ -144,7 +155,7 @@ impl Data {
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 // player.update_bone_index(vp);
                 player.update_bone_position(vp);
-                // player.status.update(vp, &player.pointer);
+                player.status.update_test(vp, &player.pointer);
                 let mut bones = [
                     &mut player.hitbox.head,
                     &mut player.hitbox.neck,
