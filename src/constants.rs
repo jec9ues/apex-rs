@@ -67,10 +67,14 @@ pub mod offsets {
     // m_iSignifierName
     pub const ITEM_ID: u64 = 0x1578;
     // m_customScriptInt
+
+    // weapon
     pub const AMMO: u64 = 0x15a0;
     // [RecvTable.DT_WeaponX_LocalWeaponData] -> m_ammoInClip
     pub const WEAPON: u64 = 0x1954;
     // m_latestPrimaryWeapons
+    pub const SELECTED_SLOT: u64 = 0x1964;
+    // m_latestNonOffhandWeapons
     pub const WEAPON_NAME: u64 = 0x1584;
     // [RecvTable.DT_WeaponX] -> m_weaponNameIndex
     pub const PLAYER_DATA: u64 = 0x15f0;

@@ -331,19 +331,19 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
                     println!("pos1 -> {:?}", pos);
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
-        data.update_cache_high(vp); // ~ 5ms
+        data.update_cache_high(vp); // ~ 5ms per player
         // data.re_cache_pointer(vp);
 
 
-        let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.head.position);
-        let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.head.position);
+        let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.upper_chest.position);
+        let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.upper_chest.position);
         // data.cache_data.local_player.set_pitch(vp, pitch);
         let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
         let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
         let angle_delta_abs = angle_delta.abs();
 
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 5.0);
-        let new_pitch = data.cache_data.local_player.pitch + pitch_delta / 5.0;
+        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / 20.0);
+        let new_pitch = data.cache_data.local_player.pitch + pitch_delta / 15.0;
         fn send(event_type: &EventType) {
             let delay = time::Duration::from_millis(20);
             match simulate(event_type) {
@@ -358,20 +358,12 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
 /*        for i in 109..200 {
             if get_button_state(i, vp, base) == 1 { println!("{}", i)}
         }*/
+        // println!("slot -> {}", weaponx_entity(vp, data.cache_data.local_player.pointer, base));
 
-        if data.key.get_key_state(InputSystem::MOUSE_RIGHT) == 1 {
-            data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
-/*            if get_button_state(110, vp, base) == 1 {
-
-                send(&EventType::ButtonPress(Button::Left));
-                send(&EventType::ButtonRelease(Button::Left));
-
-            }*/
-        };
         last_time = data.cache_data.target.status.last_crosshair_target_time;
 
         if last_vis != data.cache_data.target.status.last_visible_time{
-            if get_button_state(107, vp, base) == 1 || get_button_state(108, vp, base) == 1{
+            if data.key.get_key_state(InputSystem::MOUSE_LEFT) || data.key.get_key_state(InputSystem::MOUSE_RIGHT){
                 // data.cache_data.local_player.set_yaw(vp, new_yaw);
                 // data.cache_data.local_player.set_pitch(vp, new_pitch);
                 data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
@@ -384,25 +376,25 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         // println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
         // println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
 
-        if tick % 3 == 0 {
+        if tick % 10 == 0 {
             data.update_cache_medium(vp);
         }
-        if tick % 9 == 0 {
+        if tick % 20 == 0 {
             data.update_cache_low(vp);
             tick = 0;
         }
-        let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
-            .iter()
-            .map(|pos| world_to_screen(data.cache_data.local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))
-            .collect(); // ~ 1.2 ms
+        // let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
+        //     .iter()
+        //     .map(|pos| world_to_screen(data.cache_data.local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))
+        //     .collect(); // ~ 1.2 ms
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
-        // println!("Loop time -> {:?}", elapsed_time);
+        println!("Loop time -> {:?}", elapsed_time);
         // println!("matrix -> {:?}", data.cache_data.local_player.view_matrix);
         // println!("high -> {:?}", data.cache_pointer.cache_high);
         // println!("medium -> {:?}", data.cache_pointer.cache_medium);
         // println!("low -> {:?}", data.cache_pointer.cache_low);
-        sender.send(vh2s.clone()).expect("TODO: panic message");
+        // sender.send(vh2s.clone()).expect("TODO: panic message");
         data_sender.send(data.clone()).expect("TODO: panic message");
         aimbot_send_data.send(data.clone()).expect("TODO: panic message");
         // println!("pos -> {:?}", data.cache_data.local_player.position);

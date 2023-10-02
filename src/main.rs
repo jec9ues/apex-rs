@@ -7,6 +7,7 @@ pub mod data;
 pub mod cache;
 pub mod aimbot;
 pub mod config;
+pub mod menu;
 
 
 use std::ops::RangeInclusive;
@@ -34,16 +35,38 @@ use crate::mem::*;
 use rand::Rng;
 use crate::aimbot::main_aimbot;
 
-// TODO: build drawer lib -> box; health, shield bar; weapon icon; name; rank api
-fn box_2d(ptr: Painter, loc: Pos2, width: f32, color: Color32) {
-    // let draw = Rect::from_min_size(loc, Vec2::new(10.0, 20.0));
-    ptr.circle(loc, 3.0, Color32::TRANSPARENT, Stroke::new(width, color))
-    // ptr.rect(draw, Rounding::same(0.0),Color32::TRANSPARENT ,Stroke::new(width, color));
 
+
+fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
+    // Start with the default fonts (we will be adding to them rather than replacing them).
+    let mut fonts = egui_backend::egui::FontDefinitions::default();
+
+    // Install my own font (maybe supporting non-latin characters).
+    // .ttf and .otf files supported.
+    fonts.font_data.insert(
+        "my_font".to_owned(),
+        egui_backend::egui::FontData::from_static(include_bytes!(
+            "zh_CN.ttf"
+        )),
+    );
+
+    // Put my font first (highest priority) for proportional text:
+    fonts
+        .families
+        .entry(egui_backend::egui::FontFamily::Proportional)
+        .or_default()
+        .insert(0, "my_font".to_owned());
+
+    // Put my font as last fallback for monospace:
+    fonts
+        .families
+        .entry(egui_backend::egui::FontFamily::Monospace)
+        .or_default()
+        .push("my_font".to_owned());
+
+    // Tell egui to use these fonts:
+    ctx.set_fonts(fonts);
 }
-
-
-
 
 
 
@@ -95,6 +118,7 @@ impl EguiOverlay for Menu {
 
         // 使用 Once 标志来判断代码是否应该运行
         ONCE.call_once(|| {
+            setup_custom_fonts(egui_context);
             glfw_backend.set_window_position([0.,0.]);
             // self.size = [1920.0, 1080.0];
             glfw_backend.set_window_size([2570.0f32,1440.0f32]);
@@ -121,13 +145,7 @@ impl EguiOverlay for Menu {
         let overlay = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("overlay")),Rect::EVERYTHING);
 
 
-        match self.da.try_recv() {
-            Ok(data) => {
-                // println!("Received message from thread {:?}", data);
-                self.data = data;
-            }
-            Err(_) => { }
-        };
+
         match self.da2.try_recv() {
             Ok(data) => {
                 // println!("Received message from thread {:?}", data);
@@ -142,9 +160,7 @@ impl EguiOverlay for Menu {
             // player.1.target_line(overlay.clone());
         }
         self.re_data.cache_data.target.target_line(overlay.clone());
-        // for i in &self.data {
-        //     box_2d(overlay.clone(), Pos2::new(i.x, i.y), 1.0, Color32::WHITE);
-        // };
+
         if self.menu_on {
 
             egui_backend::egui::Window::new("Debug").show(egui_context, |ui| {
@@ -161,6 +177,10 @@ impl EguiOverlay for Menu {
                     "passthrough: {}",
                     glfw_backend.get_passthrough().unwrap()
                 ));
+
+                for i in &self.re_data.cache_data.players {
+                    i.1.dbg_view(ui);
+                }
             });
 
 

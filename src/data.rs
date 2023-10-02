@@ -11,6 +11,7 @@ use crate::function::*;
 use crate::math::*;
 use crate::mem::*;
 use named_constants::named_constants;
+use crate::menu::dbg_ui;
 
 #[derive(Debug, Clone, Default)]
 pub struct Player {
@@ -23,6 +24,7 @@ pub struct Player {
     pub position_2d: Pos2,
     pub distance: f32,
     pub rate: f32,
+    pub error: DataError,
 }
 
 
@@ -53,9 +55,6 @@ pub struct Bone {
     pub index: usize,
     pub position: Pos3,
     pub position_2d: Pos2,
-    pub width: f32,
-    pub left: Pos2,
-    pub right: Pos2,
 }
 
 #[derive(Debug, Copy, Clone, Default)]
@@ -108,56 +107,35 @@ pub struct Status {
 impl Status {
     /// addr -> entity pointer
     pub fn initialize(&mut self, vp: VmmProcess, addr: u64, base: u64, index: u64) {
-        self.health = read_u16(vp, addr + HEALTH);
-        self.max_health = read_u16(vp, addr + MAX_HEALTH);
+        let data = ContinuingData::new(read_mem(vp, addr, 0x4600));
+        self.health = data.read_u16(HEALTH); // 0x036c
+        self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
 
-        self.shield = read_u16(vp, addr + SHIELD);
-        self.max_shield = read_u16(vp, addr + MAX_SHIELD);
+        self.shield = data.read_u16(SHIELD); // 0x01a0
+        self.max_shield = data.read_u16(MAX_SHIELD); // 0x01a4
 
-        self.armor_type = read_u16(vp, addr + ARMOR_TYPE);
-        self.helmet_type = read_u16(vp, addr + HELMET_TYPE);
+        self.armor_type = data.read_u16(ARMOR_TYPE); // 0x45c4
+        self.helmet_type = data.read_u16(HELMET_TYPE); // 0x45c0
+        self.skin = data.read_u16(CURRENT_FRAMEMODEL_INDEX); // 0x00d8
 
 
-        self.team = read_u16(vp, addr + TEAM_NUM);
-        self.team_index = read_u16(vp, addr + TEAM_MEMBER_INDEX);
+        self.team = data.read_u16(TEAM_NUM);
+        self.team_index = data.read_u16(TEAM_MEMBER_INDEX);
 
-        self.dead = read_u16(vp, addr + LIFE_STATE);
-        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE);
+        self.dead = data.read_u16(LIFE_STATE); // 0x06c8
+        self.knocked = data.read_u16(BLEED_OUT_STATE); // 0x26a0
+
+        self.platform_id = data.read_u64(PLATFORM_USER_ID); // 0x2508
+
         let name_ptr = read_u64(vp, base + NAME_LIST + (index - 1) * 0x10);
         self.name = read_string(vp, name_ptr);
-        // println!("squad id -> {}", self.team_index)
+        // println!("squad id -> {}", self.name)
 
     }
+
+
 
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
-
-        self.health = read_u16(vp, addr + HEALTH); // 0x036c
-        self.max_health = read_u16(vp, addr + MAX_HEALTH); // 0x04a8
-
-        self.shield = read_u16(vp, addr + SHIELD); // 0x01a0
-        self.max_shield = read_u16(vp, addr + MAX_SHIELD); // 0x01a4
-
-        self.armor_type = read_u16(vp, addr + ARMOR_TYPE); // 0x45c4
-        self.helmet_type = read_u16(vp, addr + HELMET_TYPE); // 0x45c0
-        self.skin = read_u16(vp, addr + CURRENT_FRAMEMODEL_INDEX); // 0x00d8
-        // let player_data_ptr = read_u64(vp, addr + PLAYER_DATA);
-        // let player_datas = read_u16(vp, player_data_ptr + LEGENDARY_MODEL_INDEX);
-        // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
-        self.last_visible_time = read_f32(vp, addr + LAST_VISIBLE_TIME); // 0x19B0
-        self.last_crosshair_target_time = read_f32(vp, addr + LAST_VISIBLE_TIME + 0x8); // 0x19B0
-        self.dead = read_u16(vp, addr + LIFE_STATE); // 0x06c8
-        self.knocked = read_u16(vp, addr + BLEED_OUT_STATE); // 0x26a0
-        // let mut da = CharacterType::default();
-        // da.initialize_character_type();
-        // self.character = da.check_character_type(self.skin);
-        self.platform_id = read_u64(vp, addr + PLATFORM_USER_ID); // 0x2508
-        // let da = read_mem(vp, addr + LAST_VISIBLE_TIME, 0x30);
-        // info!("ptr -> {:x} data -> {} direct -> {:?}", player_data_ptr, player_datas, player_data.hex_dump())
-        // info!("last visible time -> {}", self.last_visible_time);
-        // info!("data -> {:?}", da.hex_dump());
-    }
-
-    pub fn update_test(&mut self, vp: VmmProcess, addr: &u64) {
         let data = ContinuingData::new(read_mem(vp, *addr, 0x4600));
         self.health = data.read_u16(HEALTH); // 0x036c
         self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
@@ -173,12 +151,13 @@ impl Status {
         // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
         self.last_visible_time = data.read_f32(LAST_VISIBLE_TIME); // 0x19B0
         self.last_crosshair_target_time = data.read_f32(LAST_VISIBLE_TIME + 0x8); // 0x19B0
+
         self.dead = data.read_u16(LIFE_STATE); // 0x06c8
         self.knocked = data.read_u16(BLEED_OUT_STATE); // 0x26a0
         // let mut da = CharacterType::default();
         // da.initialize_character_type();
         // self.character = da.check_character_type(self.skin);
-        self.platform_id = read_u64(vp, addr + PLATFORM_USER_ID); // 0x2508
+
         // let da = read_mem(vp, addr + LAST_VISIBLE_TIME, 0x30);
         // info!("ptr -> {:x} data -> {} direct -> {:?}", player_data_ptr, player_datas, player_data.hex_dump())
         // info!("last visible time -> {}", self.last_visible_time);
@@ -435,9 +414,11 @@ impl LocalPlayer {
         };
     }
 }
-
+#[derive(Default, Debug, Copy, Clone)]
 pub enum DataError {
-    BoneError
+    BoneError,
+    #[default]
+    None
 }
 impl Player {
     pub fn update_pointer(&mut self, vp: VmmProcess) {
@@ -473,9 +454,13 @@ impl Player {
         };
         res
     }
-
+    pub fn dbg_view(&self, ui: &mut Ui) {
+        dbg_ui(self, ui);
+    }
     pub fn box_esp(&self, ptr: Painter) {
-
+        if self.status.dead > 0 || self.distance > 150.0 {
+            return;
+        };
         let mut body: Vec<Pos2> = Vec::new();
         let mut leg: Vec<Pos2> = Vec::new();
         let mut hand: Vec<Pos2> = Vec::new();
@@ -540,7 +525,7 @@ impl Player {
                  format!("{:?}", self.status.character),
                  FontId::default(),
                  Color32::LIGHT_RED);*/
-        ptr.text(self.hitbox.lower_chest.position_2d,
+/*        ptr.text(self.hitbox.lower_chest.position_2d,
                  Align2::CENTER_BOTTOM,
                  format!("{:?}", self.status.last_visible_time),
                  FontId::default(),
@@ -550,11 +535,14 @@ impl Player {
                  Align2::CENTER_BOTTOM,
                  format!("{:?}", self.status.last_crosshair_target_time),
                  FontId::default(),
-                 Color32::RED);
+                 Color32::RED);*/
 
 
     }
     pub fn target_line(&self, ptr: Painter) {
+        if self.hitbox.head.position_2d == Pos2::new(0.0, 0.0) {
+            return;
+        }
         ptr.line_segment(
             [self.hitbox.head.position_2d, Pos2::new(2560.0 / 2.0, 1440.0 / 2.0)],
             Stroke::new(4.0, Color32::RED));
@@ -665,7 +653,7 @@ impl Player {
                 matrix
             })
             .collect();
-
+        if self.hitbox.head.index > 240 {return;}
         // println!("name -> {}", self.status.name);
         self.hitbox.head.position = Pos3 {
             x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
@@ -1149,14 +1137,18 @@ impl Default for KeyData {
 }
 impl KeyData {
 
-    pub fn update_key_state(&mut self, vp: VmmProcess, base: u64) {
+    pub fn update_key_state(&mut self, vp: VmmProcess, base: u64){
         let data = ContinuingData::new(
             read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
         for i in 0..255 {
             self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
         }
     }
-    pub fn get_key_state(&self, value: InputSystem) -> i32{
-        self.data[(value.0 + 1) as usize]
+    pub fn get_key_state(&self, value: InputSystem) -> bool{
+        if self.data[(value.0 + 1) as usize] == 1 {
+            true
+        } else {
+            false
+        }
     }
 }

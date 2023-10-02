@@ -75,16 +75,18 @@ impl Data {
     pub fn get_near_crosshair_player(&self) -> Player {
         let mut near_player: &Player = &Default::default();
         let mut last_distance: f32 = 999.0;
+        let mut last_dis: f32 = 999.0;
         for pointer in &self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get(&pointer) {
                 // println!("ptr -> {:?}", player.pointer);
                 // println!("head pos -> {:?}", player.hitbox.head.position_2d);
                 // println!("distance -> {}", player.distance);
-                if player.position_2d == Pos2::new(0.0, 0.0) { continue }
+                if player.position_2d == Pos2::new(0.0, 0.0) || player.distance > 150.0 || player.status.dead > 0 || player.status.knocked > 0{ continue }
                 // if player.distance > 150.0 { continue }
                 let dis = distance2d(&Pos2::new(1280.0, 720.0), &player.position_2d);
-                if last_distance > dis  {
+                if last_distance > dis && last_dis > player.distance{
                     last_distance = dis;
+                    last_dis = player.distance;
                     near_player = player;
                 }
             }
@@ -114,7 +116,7 @@ impl Data {
                 // pass local player
             }
             if player.status.team == self.cache_data.local_player.status.team {
-                // continue
+                continue
             };
             player.update_pointer(vp);
             player.update_bone_index(vp);
@@ -142,20 +144,24 @@ impl Data {
     }
 
     pub fn update_cache_high(&mut self, vp: VmmProcess) {
+
+        self.cache_data.local_player.status.update(vp, &self.cache_data.local_player.pointer);
         self.cache_data.local_player.update_bone_position(vp);
-        self.cache_data.local_player.status.update_test(vp, &self.cache_data.local_player.pointer);
         self.cache_data.local_player.update_view_matrix(vp); // 500 µs
         self.cache_data.local_player.update_angle(vp); // 500 µs
-        self.cache_data.target =  self.get_near_crosshair_player();
+
+
         self.key.update_key_state(vp, self.base);
         for pointer in &mut self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
                 // player.status.update(vp, &player.pointer);
                 player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
+                // if player.distance > 50.0 {continue}
                 // player.update_bone_index(vp);
                 player.update_bone_position(vp);
-                player.status.update_test(vp, &player.pointer);
+                player.status.update(vp, &player.pointer);
+
                 let mut bones = [
                     &mut player.hitbox.head,
                     &mut player.hitbox.neck,
@@ -179,12 +185,10 @@ impl Data {
 
                 for bone in bones.iter_mut() {
                     bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
-                    bone.width = 10.0;
-                    bone.left = Pos2 {x: bone.position_2d.x - bone.width / 2.0, y: bone.position_2d.y};
-                    bone.right = Pos2 {x: bone.position_2d.x + bone.width / 2.0, y: bone.position_2d.y};
                 };
             }
         }
+        self.cache_data.target =  self.get_near_crosshair_player();
     }
     pub fn update_cache_medium(&mut self, vp: VmmProcess) {
         for pointer in &mut self.cache_pointer.cache_medium {
@@ -192,7 +196,34 @@ impl Data {
                 // player.status.update(vp, &player.pointer);
                 player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
+                // player.update_bone_index(vp);
                 player.update_bone_position(vp);
+                player.status.update(vp, &player.pointer);
+
+                let mut bones = [
+                    &mut player.hitbox.head,
+                    &mut player.hitbox.neck,
+                    &mut player.hitbox.upper_chest,
+                    &mut player.hitbox.lower_chest,
+                    &mut player.hitbox.stomach,
+                    &mut player.hitbox.hip,
+                    &mut player.hitbox.left_shoulder,
+                    &mut player.hitbox.left_elbow,
+                    &mut player.hitbox.left_hand,
+                    &mut player.hitbox.right_shoulder,
+                    &mut player.hitbox.right_elbow,
+                    &mut player.hitbox.right_hand,
+                    &mut player.hitbox.left_thigh,
+                    &mut player.hitbox.left_knee,
+                    &mut player.hitbox.left_foot,
+                    &mut player.hitbox.right_thigh,
+                    &mut player.hitbox.right_knee,
+                    &mut player.hitbox.right_foot,
+                ];
+
+                for bone in bones.iter_mut() {
+                    bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
+                };
             }
         }
     }
@@ -202,7 +233,34 @@ impl Data {
                 // player.status.update(vp, &player.pointer);
                 player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
+                // player.update_bone_index(vp);
                 player.update_bone_position(vp);
+                player.status.update(vp, &player.pointer);
+
+                let mut bones = [
+                    &mut player.hitbox.head,
+                    &mut player.hitbox.neck,
+                    &mut player.hitbox.upper_chest,
+                    &mut player.hitbox.lower_chest,
+                    &mut player.hitbox.stomach,
+                    &mut player.hitbox.hip,
+                    &mut player.hitbox.left_shoulder,
+                    &mut player.hitbox.left_elbow,
+                    &mut player.hitbox.left_hand,
+                    &mut player.hitbox.right_shoulder,
+                    &mut player.hitbox.right_elbow,
+                    &mut player.hitbox.right_hand,
+                    &mut player.hitbox.left_thigh,
+                    &mut player.hitbox.left_knee,
+                    &mut player.hitbox.left_foot,
+                    &mut player.hitbox.right_thigh,
+                    &mut player.hitbox.right_knee,
+                    &mut player.hitbox.right_foot,
+                ];
+
+                for bone in bones.iter_mut() {
+                    bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
+                };
             }
         }
     }
@@ -257,76 +315,5 @@ impl Data {
 
     }
 
-    /*    pub fn draw_bones_width(&mut self, ptr: Painter) {
-            for pointer in &mut self.cache_pointer.cache_high {
-                if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                    let mut draw: Vec<Pos2> = Vec::new();
-                    let mut bones = [
-                        &mut player.hitbox.head,
-                        &mut player.hitbox.neck,
-                        &mut player.hitbox.upper_chest,
-                        &mut player.hitbox.lower_chest,
-                        &mut player.hitbox.stomach,
-                        &mut player.hitbox.hip,
-                        &mut player.hitbox.left_shoulder,
-                        &mut player.hitbox.left_elbow,
-                        &mut player.hitbox.left_hand,
-                        &mut player.hitbox.right_shoulder,
-                        &mut player.hitbox.right_elbow,
-                        &mut player.hitbox.right_hand,
-                        &mut player.hitbox.left_thigh,
-                        &mut player.hitbox.left_knee,
-                        &mut player.hitbox.left_foot,
-                        &mut player.hitbox.right_thigh,
-                        &mut player.hitbox.right_knee,
-                        &mut player.hitbox.right_foot,
-                    ];
 
-                    for bone in bones.iter_mut() {
-                        bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
-                        bone.width = 10.0;
-                        bone.left = Pos2 {x: bone.position_2d.x - bone.width / 2.0, y: bone.position_2d.y};
-                        bone.right = Pos2 {x: bone.position_2d.x + bone.width / 2.0, y: bone.position_2d.y};
-                    };
-
-                    draw.push(player.hitbox.head.left);
-                    draw.push(player.hitbox.neck.left);
-                    draw.push(player.hitbox.left_shoulder.left);
-                    draw.push(player.hitbox.left_elbow.left);
-                    draw.push(player.hitbox.left_hand.left);
-                    draw.push(player.hitbox.left_hand.right);
-                    draw.push(player.hitbox.left_elbow.right);
-                    draw.push(player.hitbox.left_shoulder.right);
-                    draw.push(player.hitbox.upper_chest.left);
-                    draw.push(player.hitbox.lower_chest.left);
-                    draw.push(player.hitbox.hip.left);
-                    draw.push(player.hitbox.left_thigh.left);
-                    draw.push(player.hitbox.left_knee.left);
-                    draw.push(player.hitbox.left_foot.left);
-                    draw.push(player.hitbox.left_foot.right);
-                    draw.push(player.hitbox.left_knee.right);
-                    draw.push(player.hitbox.left_thigh.right);
-                    draw.push(player.hitbox.right_thigh.left);
-                    draw.push(player.hitbox.right_knee.left);
-                    draw.push(player.hitbox.right_foot.left);
-                    draw.push(player.hitbox.right_foot.right);
-                    draw.push(player.hitbox.right_knee.right);
-                    draw.push(player.hitbox.right_thigh.right);
-                    draw.push(player.hitbox.hip.right);
-                    draw.push(player.hitbox.lower_chest.right);
-                    draw.push(player.hitbox.upper_chest.right);
-                    draw.push(player.hitbox.right_shoulder.left);
-                    draw.push(player.hitbox.right_elbow.left);
-                    draw.push(player.hitbox.right_hand.left);
-                    draw.push(player.hitbox.right_hand.right);
-                    draw.push(player.hitbox.right_elbow.right);
-                    draw.push(player.hitbox.right_shoulder.right);
-                    draw.push(player.hitbox.neck.right);
-                    draw.push(player.hitbox.head.right);
-                    draw.push(player.hitbox.head.left);
-                    ptr.add(Shape::Path(PathShape::closed_line(draw, Stroke::new(1.0, Color32::RED))));
-
-                }
-            }
-        }*/
 }
