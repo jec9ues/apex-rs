@@ -1,18 +1,18 @@
 pub mod offsets {
-    pub const CL_ENTITYLIST: u64 = 0x1e23418;
+    pub const CL_ENTITYLIST: u64 = 0x1e223f8;
     // [Miscellaneous] -> cl_entitylist
-    pub const LOCAL_PLAYER: u64 = 0x21d3758;
+    pub const LOCAL_PLAYER: u64 = 0x21d2738;
     // LocalPlayer
-    pub const NAME_LIST: u64 = 0xc266a60;
+    pub const NAME_LIST: u64 = 0xc265a60;
     // [Miscellaneous] -> NameList
-    pub const VIEW_RENDER: u64 = 0x74210a8;
+    pub const VIEW_RENDER: u64 = 0x74200a8;
     // ViewRender
     pub const VIEW_MATRIX: u64 = 0x11a350;
     // ViewMatrix
-    pub const INPUT_SYSTEM: u64 = 0x1774cc0;
+    pub const INPUT_SYSTEM: u64 = 0x1773c00;
     pub const CAMERA_POSITION: u64 = 0x1e90;
     //[Miscellaneous] -> CPlayer!camera_origin
-    pub const LEVEL_NAME: u64 = 0x16f71e0;
+    pub const LEVEL_NAME: u64 = 0x16f61c0;
     // [Miscellaneous] -> LevelName
     pub const GLOW_COLOR: u64 = 0x200;
     // [Miscellaneous] -> glow_color
@@ -53,8 +53,7 @@ pub mod offsets {
     // [RecvTable.DT_Player] -> m_bleedoutState
     pub const PLATFORM_USER_ID: u64 = 0x2508;
     // [RecvTable.DT_Player] -> m_platformUserId=0x2508
-    pub const EADP_USER_ID: u64 = 0x2520;
-    // [RecvTable.DT_Player] -> m_EadpUserId=0x2520
+
     pub const STUDIOHDR: u64 = 0x1020;
     //CBaseAnimating!m_pStudioHdr
     pub const BONE: u64 = 0x0dd0 + 0x48;
@@ -87,7 +86,7 @@ pub mod offsets {
     // CWeaponX!m_flProjectileSpeed [WeaponSettingsMeta]
     pub const BULLET_SCALE: u64 = WEAPON_SETTING_BASE + 0x4dc;
     // CWeaponX!m_flProjectileScale [WeaponSettingsMeta]
-    pub const ZOOM_FOV: u64 = 0x15f0 + 0x00b8;
+    pub const ZOOM_FOV: u64 = PLAYER_DATA + 0x00b8;
     // m_playerData + m_curZoomFOV
     pub const SEMI_AUTO: u64 = WEAPON_SETTING_BASE + 0x018c;
     // [WeaponSettingsMeta] is_semi_auto / m_isSemiAuto

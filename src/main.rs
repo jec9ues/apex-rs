@@ -155,16 +155,19 @@ impl EguiOverlay for Menu {
         };
         // println!("most far distance -> {}", self.re_data.get_near_pointer());
         // self.re_data.draw_bones_width(overlay.clone());
+        self.re_data.cache_data.target.target_line(overlay.clone(), self.re_data.config.screen.center);
+        self.re_data.cache_data.target.bone_esp(overlay.clone(), 150.0);
         for player in &self.re_data.cache_data.players {
-            player.1.box_esp(overlay.clone());
+            // player.1.box_esp(overlay.clone());
+            player.1.position_esp(overlay.clone());
             // player.1.target_line(overlay.clone());
         }
-        self.re_data.cache_data.target.target_line(overlay.clone());
+        self.re_data.cache_data.target.target_line(overlay.clone(), self.re_data.config.screen.center);
 
         if self.menu_on {
 
-            egui_backend::egui::Window::new("Debug").show(egui_context, |ui| {
-                ui.set_width(300.0);
+            egui_backend::egui::Window::new("Debug").vscroll(true).show(egui_context, |ui| {
+                ui.set_width(450.0);
                 self.frame += 1;
 
 

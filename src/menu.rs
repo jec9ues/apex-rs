@@ -1,4 +1,7 @@
 use egui_backend::egui::*;
+
+
+
 use crate::data::*;
 pub fn status_ui(status: &Status, ui: &mut Ui) {
     CollapsingHeader::new(format!("{}'s status", status.name))
@@ -108,12 +111,24 @@ pub fn status_ui(status: &Status, ui: &mut Ui) {
 pub fn dbg_ui(player: &Player, ui: &mut Ui) {
     ui.group( |ui| {
         ui.vertical( |ui| {
-            ui.label(format!("player index -> {}", player.index));
-            ui.label(format!("player pointer -> {}", player.pointer));
-            ui.label(format!("player distance -> {}", player.distance));
+            let mut title = RichText::new("Default");
+            if player.status.dead > 0 {
+                title = RichText::new(format!("{} -> {}", player.index, player.status.name)).color(Color32::RED).strikethrough();
+            }  else {
+                title = RichText::new(format!("{} -> {}", player.index, player.status.name)).color(Color32::GREEN);
+            }
+            CollapsingHeader::new(title)
+                .default_open(false)
+                .show(ui, |ui| {
+                    ui.label(format!("player pointer -> {:x}", player.pointer));
+                    ui.label(format!("player distance -> {}", player.distance));
+                    ui.label(format!("player distance -> {:?}", player.position));
+                    status_ui(&player.status, ui);
+                });
+
             // ui.label(format!("player rate -> {}", player.rate));
 
-            status_ui(&player.status, ui);
+
             // pub index: u64,
             // pub pointer: u64,
             // pub bone_pointer: u64,

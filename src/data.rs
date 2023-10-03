@@ -94,7 +94,9 @@ pub struct Status {
     pub helmet_type: u16,
     pub armor_type: u16,
     pub last_visible_time: f32,
+    pub previous_last_visible_time: f32,
     pub last_crosshair_target_time: f32,
+    pub previous_crosshair_target_time: f32,
     pub skin: u16,
     pub character: Character,
     pub team: u16,
@@ -133,8 +135,6 @@ impl Status {
 
     }
 
-
-
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
         let data = ContinuingData::new(read_mem(vp, *addr, 0x4600));
         self.health = data.read_u16(HEALTH); // 0x036c
@@ -146,9 +146,14 @@ impl Status {
         self.armor_type = data.read_u16(ARMOR_TYPE); // 0x45c4
         self.helmet_type = data.read_u16(HELMET_TYPE); // 0x45c0
         self.skin = data.read_u16(CURRENT_FRAMEMODEL_INDEX); // 0x00d8
+
         // let player_data_ptr = read_u64(vp, addr + PLAYER_DATA);
         // let player_datas = read_u16(vp, player_data_ptr + LEGENDARY_MODEL_INDEX);
         // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
+
+        self.last_visible_time = self.previous_last_visible_time;
+        self.previous_crosshair_target_time = self.last_crosshair_target_time;
+
         self.last_visible_time = data.read_f32(LAST_VISIBLE_TIME); // 0x19B0
         self.last_crosshair_target_time = data.read_f32(LAST_VISIBLE_TIME + 0x8); // 0x19B0
 
@@ -164,6 +169,19 @@ impl Status {
         // info!("data -> {:?}", da.hex_dump());
         // println!("test -> {:?}", self)
     }
+
+    pub fn visible(&self) -> bool {
+        !(self.last_visible_time == self.previous_last_visible_time)
+    }
+    pub fn target(&self) -> bool {
+        !(self.last_crosshair_target_time == self.previous_crosshair_target_time)
+    }
+    pub fn alive(&self) -> bool {
+        !(self.dead > 0)
+    }
+    pub fn knocked(&self) -> bool {
+        !(self.knocked > 0)
+    }
 }
 
 
@@ -178,7 +196,6 @@ pub struct LocalPlayer {
     pub camera_position: Pos3,
     pub pitch: f32,
     pub yaw: f32,
-
     pub bone_pointer: u64,
     pub hitbox: Hitbox,
 }
@@ -194,6 +211,10 @@ impl LocalPlayer {
 
     pub fn update_position(&mut self, vp: VmmProcess) {
         self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
+        // let local: Vec<f32> = read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap();
+        // let vec: Vec<f32> = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
+        // println!("local -> {:?}", local);
+        // println!("vec -> {:?}", vec);
     }
 
     pub fn update_view_matrix(&mut self, vp: VmmProcess) {
@@ -291,10 +312,10 @@ impl LocalPlayer {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
 
         // float: 4 * matrix: 12 * bone: 200
-        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 240);
+        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 20);
         // println!("{:?}", data.hex_dump());
 
-        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 240);
+        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 20);
 
         for chunk in data.chunks_exact(4) {
             let mut array: [u8; 4] = [0; 4];
@@ -327,91 +348,7 @@ impl LocalPlayer {
             y: matrix[self.hitbox.head.index][1][3] + vec_abs_origin[1],
             z: matrix[self.hitbox.head.index][2][3] + vec_abs_origin[2],
         };
-        self.hitbox.neck.position = Pos3 {
-            x: matrix[self.hitbox.neck.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.neck.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.neck.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.upper_chest.position = Pos3 {
-            x: matrix[self.hitbox.upper_chest.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.upper_chest.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.upper_chest.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.lower_chest.position = Pos3 {
-            x: matrix[self.hitbox.lower_chest.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.lower_chest.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.lower_chest.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.stomach.position = Pos3 {
-            x: matrix[self.hitbox.stomach.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.stomach.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.stomach.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.hip.position = Pos3 {
-            x: matrix[self.hitbox.hip.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.hip.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.hip.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_shoulder.position = Pos3 {
-            x: matrix[self.hitbox.left_shoulder.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_shoulder.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_shoulder.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_elbow.position = Pos3 {
-            x: matrix[self.hitbox.left_elbow.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_elbow.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_elbow.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_hand.position = Pos3 {
-            x: matrix[self.hitbox.left_hand.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_hand.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_hand.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_shoulder.position = Pos3 {
-            x: matrix[self.hitbox.right_shoulder.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_shoulder.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_shoulder.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_elbow.position = Pos3 {
-            x: matrix[self.hitbox.right_elbow.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_elbow.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_elbow.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_hand.position = Pos3 {
-            x: matrix[self.hitbox.right_hand.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_hand.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_hand.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_thigh.position = Pos3 {
-            x: matrix[self.hitbox.left_thigh.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_thigh.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_thigh.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_knee.position = Pos3 {
-            x: matrix[self.hitbox.left_knee.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_knee.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_knee.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_foot.position = Pos3 {
-            x: matrix[self.hitbox.left_foot.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_foot.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_foot.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_thigh.position = Pos3 {
-            x: matrix[self.hitbox.right_thigh.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_thigh.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_thigh.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_knee.position = Pos3 {
-            x: matrix[self.hitbox.right_knee.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_knee.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_knee.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_foot.position = Pos3 {
-            x: matrix[self.hitbox.right_foot.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_foot.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_foot.index][2][3] + vec_abs_origin[2],
-        };
+
     }
 }
 #[derive(Default, Debug, Copy, Clone)]
@@ -457,10 +394,19 @@ impl Player {
     pub fn dbg_view(&self, ui: &mut Ui) {
         dbg_ui(self, ui);
     }
-    pub fn box_esp(&self, ptr: Painter) {
-        if self.status.dead > 0 || self.distance > 150.0 {
+    pub fn position_esp(&self, ptr: Painter) {
+        ptr.circle_filled(self.position_2d, 3.0, TEAM_COLOR[self.status.team as usize]);
+        ptr.text(self.position_2d,
+                 Align2::CENTER_BOTTOM,
+                 format!("{:?}", self.status.name),
+                 FontId::default(),
+                 Color32::LIGHT_BLUE);
+    }
+    pub fn bone_esp(&self, ptr: Painter, distance: f32) {
+        if self.status.dead > 0 || self.distance > distance {
             return;
         };
+        // println!("bone esp -> {:?}", self.hitbox);
         let mut body: Vec<Pos2> = Vec::new();
         let mut leg: Vec<Pos2> = Vec::new();
         let mut hand: Vec<Pos2> = Vec::new();
@@ -539,18 +485,15 @@ impl Player {
 
 
     }
-    pub fn target_line(&self, ptr: Painter) {
-        if self.hitbox.head.position_2d == Pos2::new(0.0, 0.0) {
-            return;
-        }
+    pub fn target_line(&self, ptr: Painter, center: Pos2) {
         ptr.line_segment(
-            [self.hitbox.head.position_2d, Pos2::new(2560.0 / 2.0, 1440.0 / 2.0)],
+            [self.position_2d, center],
             Stroke::new(4.0, Color32::RED));
     }
 
-    pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4]) {
+    pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
         self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
-        self.position_2d = world_to_screen(matrix, self.position, Pos2 {x: 2560.0, y: 1440.0});
+        self.position_2d = world_to_screen(matrix, self.position, screen_size);
     }
 
     pub fn update_distance(&mut self, vp: VmmProcess, pos: &Pos3) {
@@ -622,7 +565,7 @@ impl Player {
 
     pub fn update_bone_position(&mut self, vp: VmmProcess) {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-
+        self.position = Pos3::from_array(vec_abs_origin);
         // float: 4 * matrix: 12 * bone: 200
         let data = read_mem(vp, self.bone_pointer, 4 * 12 * 240);
         // println!("{:?}", data.hex_dump());
@@ -744,6 +687,33 @@ impl Player {
             x: matrix[self.hitbox.right_foot.index][0][3] + vec_abs_origin[0],
             y: matrix[self.hitbox.right_foot.index][1][3] + vec_abs_origin[1],
             z: matrix[self.hitbox.right_foot.index][2][3] + vec_abs_origin[2],
+        };
+    }
+
+    pub fn update_bone_position_2d(&mut self, matrix: [[f32; 4]; 4]) {
+        let mut bones = [
+            &mut self.hitbox.head,
+            &mut self.hitbox.neck,
+            &mut self.hitbox.upper_chest,
+            &mut self.hitbox.lower_chest,
+            &mut self.hitbox.stomach,
+            &mut self.hitbox.hip,
+            &mut self.hitbox.left_shoulder,
+            &mut self.hitbox.left_elbow,
+            &mut self.hitbox.left_hand,
+            &mut self.hitbox.right_shoulder,
+            &mut self.hitbox.right_elbow,
+            &mut self.hitbox.right_hand,
+            &mut self.hitbox.left_thigh,
+            &mut self.hitbox.left_knee,
+            &mut self.hitbox.left_foot,
+            &mut self.hitbox.right_thigh,
+            &mut self.hitbox.right_knee,
+            &mut self.hitbox.right_foot,
+        ];
+
+        for bone in bones.iter_mut() {
+            bone.position_2d = world_to_screen(matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
         };
     }
 }

@@ -8,6 +8,8 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::u8;
 use std::default::Default;
+use egui_backend::egui::Color32;
+use egui_backend::egui::CursorIcon::Text;
 use log::{debug, info};
 use memprocfs::*;
 use pretty_hex::*;
@@ -119,7 +121,7 @@ pub fn item_glow(vp: VmmProcess, addr: u64) {
     // write_u64(vp, (chunk_u64 + 0x02f0) as u64, 1363184265); // loba-style m_highlightFunctionBits
 }
 /// addr -> base address
-pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
+pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u16) {
     let entity_list: u64 = addr + CL_ENTITYLIST;
     let end = entity_list + (15000 << 5);
     let area = (15000 << 5);
@@ -141,10 +143,21 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
         let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().expect("Chunk has unexpected length"));
         if chunk_u64 == 0 { continue; }
         array.push(chunk_u64);
-        // write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
-        // write_u8(vp, chunk_u64 + 0x270, 0);
-        // write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
-        // write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, x);
+        let name = get_client_class_name(vp, chunk_u64);
+        // println!("{name}");
+/*        if name == "CPropSurvival" {// 12 13 22 25 45 47 51 65 129 132 133 145 149 156 170 174 179 191?
+            // println!("in");
+            write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
+            write_u8(vp, chunk_u64 + 0x270, 0);
+            write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
+            write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, x);
+        }*/
+
+        let local_ptr = read_u64(vp, addr + LOCAL_PLAYER);
+
+        write_u16(vp, chunk_u64 + TEAM_NUM, read_u16(vp, local_ptr + TEAM_NUM));
+        // sleep(Duration::from_secs(1));
+
 
 
 
@@ -155,8 +168,8 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
 
         // write_mem(vp, chunk_u64 + GLOW_TYPE, [101, 102, 96, 75].to_vec());
         // info!("BOT -> {:?}", read_mem(vp, chunk_u64 + GLOW_COLOR + 0x40 , 0x50).hex_dump());
-        let team_num = read_u64(vp, (chunk_u64 + TEAM_NUM) as u64);
-        if true {
+        // let team_num = read_u64(vp, (chunk_u64 + TEAM_NUM) as u64);
+        if false {
             write_u32(vp, chunk_u64 + OFFSET_HIGHLIGHTCURRENTCONTEXTID, 0);  // context id to 1
             write_u32(vp, chunk_u64 + OFFSET_HIGHLIGHTVISIBILITYTYPE, 2); // visibility to always
             write_u8(vp, chunk_u64 + OFFSET_HIGHLIGHTSERVERACTIVESTATES, 200);  // maybe a rarely used settings
@@ -180,7 +193,31 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u8) {
     }
 }
 
-
+pub const TEAM_COLOR: [Color32; 23] = [
+    Color32::DARK_GRAY,
+    Color32::from_rgb(20, 150, 0),
+    Color32::from_rgb(120, 50, 0),
+    Color32::from_rgb(20, 150, 50),
+    Color32::from_rgb(0, 50, 50),
+    Color32::LIGHT_GRAY,
+    Color32::BROWN,
+    Color32::DARK_RED,
+    Color32::RED,
+    Color32::from_rgb(200, 0, 0),
+    Color32::LIGHT_RED,
+    Color32::YELLOW,
+    Color32::LIGHT_YELLOW,
+    Color32::KHAKI,
+    Color32::DARK_GREEN,
+    Color32::GREEN,
+    Color32::from_rgb(0, 200, 0),
+    Color32::LIGHT_GREEN,
+    Color32::DARK_BLUE,
+    Color32::BLUE,
+    Color32::LIGHT_BLUE,
+    Color32::GOLD,
+    Color32::from_rgb(0, 0, 200),
+];
 
 
 
@@ -190,7 +227,7 @@ pub fn get_client_class_name(vp: VmmProcess, ptr: u64) -> String {
     let offset = read_u32(vp, get_client_entity + 3);
     let network_name_ptr = read_u64(vp, get_client_entity + offset as u64 + 7 + 16);
     let network_name = read_string(vp, network_name_ptr);
-    println!("{}", network_name);
+    // println!("{}", network_name);
     return network_name;
 }
 

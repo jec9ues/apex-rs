@@ -15,6 +15,7 @@ use crate::data::*;
 use crate::function::*;
 use crate::math::*;
 use rdev::*;
+use crate::config::ScreenConfig;
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
     match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
@@ -255,7 +256,7 @@ impl ContinuingData {
     }
 
     pub fn read_string(&self, addr: u64) -> String {
-        const SIZE: usize = 24; // 假设最大字符串长度为 32，可以根据实际情况调整
+        const SIZE: usize = 32; // 假设最大字符串长度为 32，可以根据实际情况调整
 
         let slice = &self.value[addr as usize..(addr as usize + SIZE)];
         let bytes: [u8; SIZE] = slice.try_into().unwrap();
@@ -317,12 +318,13 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
     let mut data = Data::default();
     data.initialize(vp, base);
     data.cache_data.local_player.update_pointer(vp, base);
-    let mut tick = 0;
-    let mut last_time = 0.0;
-    let mut last_vis = 0.0;
+    let mut tick = 20;
+
+    data.config.screen = ScreenConfig::new([2560.0, 1440.0]);
     loop {
         // entity.status.update(vp, entity.pointer, base);
-        // im_player_glow(vp, base, 0);
+        // 12 blue  13 22 normal 25 yellow 45 47 51 flash no outline 174 small outline
+
 
         // println!("status -> {:?}", entity.status);
         let start_time = Instant::now();
@@ -331,7 +333,18 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
                     println!("pos1 -> {:?}", pos);
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
-        data.update_cache_high(vp); // ~ 5ms per player
+        data.update_basic(vp, 150.0); // ~ 5ms per player
+        data.update_target(vp, 150.0);
+        // println!("target name -> {}", data.cache_data.target.status.name);
+        data.update_status(vp);
+        if tick % 20 == 0 {
+
+            data.update_basic(vp, 999.0); // ~ 5ms per player
+            tick = 0;
+        }
+
+        // im_player_glow(vp, base, data.cache_data.local_player.status.team);
+
         // data.re_cache_pointer(vp);
 
 
@@ -360,10 +373,10 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
         }*/
         // println!("slot -> {}", weaponx_entity(vp, data.cache_data.local_player.pointer, base));
 
-        last_time = data.cache_data.target.status.last_crosshair_target_time;
+        // last_time = data.cache_data.target.status.last_crosshair_target_time;
 
-        if last_vis != data.cache_data.target.status.last_visible_time{
-            if data.key.get_key_state(InputSystem::MOUSE_LEFT) || data.key.get_key_state(InputSystem::MOUSE_RIGHT){
+        if data.cache_data.target.status.visible(){
+            if data.key.get_key_state(InputSystem::KEY_XBUTTON_LEFT_SHOULDER) || data.key.get_key_state(InputSystem::MOUSE_RIGHT){
                 // data.cache_data.local_player.set_yaw(vp, new_yaw);
                 // data.cache_data.local_player.set_pitch(vp, new_pitch);
                 data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
@@ -371,18 +384,12 @@ pub fn main_mem(sender: Sender<Vec<Pos2>>, data_sender: Sender<Data>, aimbot_sen
             }
         }
 
-        last_vis = data.cache_data.target.status.last_visible_time;
+        // last_vis = data.cache_data.target.status.last_visible_time;
         // println!("button state -> {}", get_button_state(107, vp, base));
         // println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
         // println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
 
-        if tick % 10 == 0 {
-            data.update_cache_medium(vp);
-        }
-        if tick % 20 == 0 {
-            data.update_cache_low(vp);
-            tick = 0;
-        }
+
         // let vh2s: Vec<Pos2> = data.cache_data.get_players_bones_position(vp)
         //     .iter()
         //     .map(|pos| world_to_screen(data.cache_data.local_player.view_matrix, *pos, Pos2::new(2560.0, 1440.0)))

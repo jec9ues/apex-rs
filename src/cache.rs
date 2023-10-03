@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::Condvar;
 use egui_backend::egui::*;
 use egui_backend::egui::epaint::PathShape;
 use egui_window_glfw_passthrough::glfw::WindowEvent::Pos;
@@ -52,12 +53,13 @@ pub struct Data {
     pub cache_pointer: CachePtr,
     pub cache_data: CacheData,
     pub key: KeyData,
-    // pub config: Config,
+    pub config: Config,
     // pub table: DataTable,
 }
 
 impl Data {
     //TODO: improve get player by distance, health, fov
+
     pub fn get_near_player(&self) -> Player {
         let mut near_player: &Player = &Default::default();
         let mut last_distance: f32 = 0.0;
@@ -81,10 +83,10 @@ impl Data {
                 // println!("ptr -> {:?}", player.pointer);
                 // println!("head pos -> {:?}", player.hitbox.head.position_2d);
                 // println!("distance -> {}", player.distance);
-                if player.position_2d == Pos2::new(0.0, 0.0) || player.distance > 150.0 || player.status.dead > 0 || player.status.knocked > 0{ continue }
+                if player.position_2d == Pos2::ZERO || player.distance > 150.0 || player.status.dead > 0 || player.status.knocked > 0 { continue }
                 // if player.distance > 150.0 { continue }
-                let dis = distance2d(&Pos2::new(1280.0, 720.0), &player.position_2d);
-                if last_distance > dis && last_dis > player.distance{
+                let dis = distance2d(&self.config.screen.center, &player.position_2d);
+                if last_distance > dis{
                     last_distance = dis;
                     last_dis = player.distance;
                     near_player = player;
@@ -95,7 +97,22 @@ impl Data {
         near_player.clone()
     }
 
-
+    pub fn get_near_crosshair_target(&self, distance: f32) -> Player {
+        let mut near_player: &Player = &Default::default();
+        let mut last_distance: f32 = 999.0;
+        for pointer in &self.cache_pointer.cache_medium {
+            if let Some(player) = self.cache_data.players.get(&pointer) {
+                if player.position_2d == Pos2::ZERO || player.distance > distance || player.status.dead > 0 || player.status.knocked > 0 { continue }
+                let dis = distance2d(&self.config.screen.center, &player.position_2d);
+                if last_distance > dis{
+                    last_distance = dis;
+                    near_player = player;
+                }
+            }
+        }
+        // println!("distance -> {}", near_player.status.platform_id);
+        near_player.clone()
+    }
     pub fn initialize(&mut self, vp: VmmProcess, base: u64) {
         //init data
         self.base = base;
@@ -112,38 +129,60 @@ impl Data {
             let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
             player.status.initialize(vp, pointer[1], self.base, pointer[0]);
             if player.status.team_index == self.cache_data.local_player.status.team_index && player.status.team == self.cache_data.local_player.status.team {
-                continue
+                // continue
                 // pass local player
             }
-            if player.status.team == self.cache_data.local_player.status.team {
+/*            if player.status.team == self.cache_data.local_player.status.team {
                 continue
-            };
+            };*/
             player.update_pointer(vp);
             player.update_bone_index(vp);
 
-            player.update_position(vp, self.cache_data.local_player.view_matrix);
+            player.update_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
             player.update_distance(vp, &self.cache_data.local_player.position);
             player.update_bone_position(vp);
             // println!("distance -> {:?}", player.distance);
             // println!("pos -> {:?} pos -> {:?}", &player.position, &self.cache_data.local_player.position);
 
 
-/*            if player.distance > 50.0 {
-                self.cache_pointer.cache_low.push(pointer[1]);
-            } else if player.status.dead > 0 {
-                self.cache_pointer.cache_low.push(pointer[1]);
-            } else if player.status.knocked > 0 {
-                self.cache_pointer.cache_medium.push(pointer[1]);
-            } else {
-                self.cache_pointer.cache_high.push(pointer[1]);
-            };*/
-            self.cache_pointer.cache_high.push(pointer[1]);
+
+            self.cache_pointer.cache_medium.push(pointer[1]);
             self.cache_data.players.insert(pointer[1], player);
         }
-        println!("{}", self.cache_pointer.cache_high.len());
+        println!("{}", self.cache_pointer.cache_medium.len());
     }
+    pub fn update_basic(&mut self, vp: VmmProcess, distance: f32) {
 
-    pub fn update_cache_high(&mut self, vp: VmmProcess) {
+
+        self.cache_data.local_player.update_bone_position(vp);
+        self.cache_data.local_player.update_view_matrix(vp); // 500 µs
+        self.cache_data.local_player.update_angle(vp); // 500 µs
+        self.key.update_key_state(vp, self.base);
+
+        for pointer in &mut self.cache_pointer.cache_medium {
+            if let Some(player) = self.cache_data.players.get_mut(&pointer) {
+                if player.distance > distance {
+                    continue
+                }
+                player.update_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
+                player.update_distance(vp, &self.cache_data.local_player.position);
+            }
+        }
+    }
+    pub fn update_status(&mut self, vp: VmmProcess) {
+        // self.cache_data.local_player.status.update(vp, &self.cache_data.local_player.pointer);
+        for pointer in &mut self.cache_pointer.cache_medium {
+            if let Some(player) = self.cache_data.players.get_mut(&pointer) {
+                player.status.update(vp, &player.pointer);
+            }
+        }
+    }
+    pub fn update_target(&mut self, vp: VmmProcess, distance: f32) {
+        self.cache_data.target =  self.get_near_crosshair_target(distance);
+        self.cache_data.target.update_bone_position(vp);
+        self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
+    }
+/*    pub fn update_cache_high(&mut self, vp: VmmProcess) {
 
         self.cache_data.local_player.status.update(vp, &self.cache_data.local_player.pointer);
         self.cache_data.local_player.update_bone_position(vp);
@@ -155,37 +194,15 @@ impl Data {
         for pointer in &mut self.cache_pointer.cache_high {
             if let Some(player) = self.cache_data.players.get_mut(&pointer) {
                 // player.status.update(vp, &player.pointer);
+                // player.status.update(vp, &player.pointer);
+
                 player.update_position(vp, self.cache_data.local_player.view_matrix);
                 player.update_distance(vp, &self.cache_data.local_player.position);
                 // if player.distance > 50.0 {continue}
                 // player.update_bone_index(vp);
-                player.update_bone_position(vp);
-                player.status.update(vp, &player.pointer);
+                // player.update_bone_position(vp);
 
-                let mut bones = [
-                    &mut player.hitbox.head,
-                    &mut player.hitbox.neck,
-                    &mut player.hitbox.upper_chest,
-                    &mut player.hitbox.lower_chest,
-                    &mut player.hitbox.stomach,
-                    &mut player.hitbox.hip,
-                    &mut player.hitbox.left_shoulder,
-                    &mut player.hitbox.left_elbow,
-                    &mut player.hitbox.left_hand,
-                    &mut player.hitbox.right_shoulder,
-                    &mut player.hitbox.right_elbow,
-                    &mut player.hitbox.right_hand,
-                    &mut player.hitbox.left_thigh,
-                    &mut player.hitbox.left_knee,
-                    &mut player.hitbox.left_foot,
-                    &mut player.hitbox.right_thigh,
-                    &mut player.hitbox.right_knee,
-                    &mut player.hitbox.right_foot,
-                ];
-
-                for bone in bones.iter_mut() {
-                    bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
-                };
+                self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
             }
         }
         self.cache_data.target =  self.get_near_crosshair_player();
@@ -200,30 +217,7 @@ impl Data {
                 player.update_bone_position(vp);
                 player.status.update(vp, &player.pointer);
 
-                let mut bones = [
-                    &mut player.hitbox.head,
-                    &mut player.hitbox.neck,
-                    &mut player.hitbox.upper_chest,
-                    &mut player.hitbox.lower_chest,
-                    &mut player.hitbox.stomach,
-                    &mut player.hitbox.hip,
-                    &mut player.hitbox.left_shoulder,
-                    &mut player.hitbox.left_elbow,
-                    &mut player.hitbox.left_hand,
-                    &mut player.hitbox.right_shoulder,
-                    &mut player.hitbox.right_elbow,
-                    &mut player.hitbox.right_hand,
-                    &mut player.hitbox.left_thigh,
-                    &mut player.hitbox.left_knee,
-                    &mut player.hitbox.left_foot,
-                    &mut player.hitbox.right_thigh,
-                    &mut player.hitbox.right_knee,
-                    &mut player.hitbox.right_foot,
-                ];
-
-                for bone in bones.iter_mut() {
-                    bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
-                };
+                self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
             }
         }
     }
@@ -237,30 +231,7 @@ impl Data {
                 player.update_bone_position(vp);
                 player.status.update(vp, &player.pointer);
 
-                let mut bones = [
-                    &mut player.hitbox.head,
-                    &mut player.hitbox.neck,
-                    &mut player.hitbox.upper_chest,
-                    &mut player.hitbox.lower_chest,
-                    &mut player.hitbox.stomach,
-                    &mut player.hitbox.hip,
-                    &mut player.hitbox.left_shoulder,
-                    &mut player.hitbox.left_elbow,
-                    &mut player.hitbox.left_hand,
-                    &mut player.hitbox.right_shoulder,
-                    &mut player.hitbox.right_elbow,
-                    &mut player.hitbox.right_hand,
-                    &mut player.hitbox.left_thigh,
-                    &mut player.hitbox.left_knee,
-                    &mut player.hitbox.left_foot,
-                    &mut player.hitbox.right_thigh,
-                    &mut player.hitbox.right_knee,
-                    &mut player.hitbox.right_foot,
-                ];
-
-                for bone in bones.iter_mut() {
-                    bone.position_2d = world_to_screen(self.cache_data.local_player.view_matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
-                };
+                self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
             }
         }
     }
@@ -313,7 +284,7 @@ impl Data {
             self.cache_pointer.cache_low.retain(|&x| x != item);
         }
 
-    }
+    }*/
 
 
 }
