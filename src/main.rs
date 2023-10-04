@@ -10,6 +10,7 @@ pub mod config;
 pub mod menu;
 
 
+use std::fmt::{Debug, Display};
 use std::ops::RangeInclusive;
 use std::sync::Once;
 use egui_backend::{WindowBackend};
@@ -26,7 +27,7 @@ use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape
 use egui_backend::egui::plot::{Line, Plot, PlotPoints};
 
 use log4rs;
-use log::debug;
+use log::{debug, info};
 use memprocfs::*;
 use crate::cache::Data;
 use crate::function::*;
@@ -34,7 +35,8 @@ use crate::math::world_to_screen;
 use crate::mem::*;
 use rand::Rng;
 use crate::aimbot::main_aimbot;
-
+use crate::config::{Config, MenuConfig};
+use crate::menu::{edit_aimbot_config, edit_esp_config, edit_glow_config, edit_screen_size};
 
 
 fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
@@ -69,41 +71,46 @@ fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
 }
 
 
-
 fn main() {
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
-    let (sender, receiver) = unbounded::<Vec<Pos2>>();
-    let (data_sender, data_receiver) = unbounded::<Data>();
-
-    let (aimbot_send_data, aimbot_receive_data) = unbounded::<Data>();
 
 
-/*    thread::spawn(move || {
-        main_aimbot(aimbot_receive_data);
+    let (config_sender, config_receiver) = bounded::<Config>(1);
 
-    });*/
+    let (data_sender, data_receiver) = bounded::<Data>(1);
 
+    let (restart_sender, restart_receiver) = bounded::<bool>(1);
     thread::spawn(move || {
-        main_mem(sender, data_sender, aimbot_send_data);
+        loop {
+
+            main_mem(data_sender.clone(), config_receiver.clone(), restart_receiver.clone());
         }
-    );
+
+    });
 
 
-    egui_overlay::start(Menu {size: [0.0; 2], da2: data_receiver, re_data: Data::default(), data: Vec::new(), frame: 0, menu_on: true, last_frame_time: Instant::now(), fps: 0.0 , da: receiver});
-
+    egui_overlay::start(Menu {
+        last_frame_time: Instant::now(),
+        data: Data::default(),
+        data_recv: data_receiver,
+        menu_config: MenuConfig::default(),
+        config_sender,
+        restart_sender
+    });
 }
+
 // TODO: config channel
 pub struct Menu {
-    pub frame: u64,
-    pub menu_on: bool,
     pub last_frame_time: Instant,
-    pub fps: f32,
-    pub da: Receiver<Vec<Pos2>>,
-    pub data: Vec<Pos2>,
-    pub re_data: Data,
-    pub da2: Receiver<Data>,
-    pub size: [f32; 2],
+
+    pub data: Data,
+    pub data_recv: Receiver<Data>,
+
+    pub menu_config: MenuConfig,
+    pub config_sender: Sender<Config>,
+    
+    pub restart_sender: Sender<bool>
 }
 
 impl EguiOverlay for Menu {
@@ -113,97 +120,82 @@ impl EguiOverlay for Menu {
         _default_gfx_backend: &mut DefaultGfxBackend,
         glfw_backend: &mut egui_window_glfw_passthrough::GlfwBackend,
     ) {
-
         static ONCE: Once = Once::new();
 
-        // 使用 Once 标志来判断代码是否应该运行
-        ONCE.call_once(|| {
+        ONCE.call_once( || {
             setup_custom_fonts(egui_context);
-            glfw_backend.set_window_position([0.,0.]);
-            // self.size = [1920.0, 1080.0];
-            glfw_backend.set_window_size([2570.0f32,1440.0f32]);
-            // println!("This code runs only once.");
+            glfw_backend.set_window_position([0., 0.]);
+            glfw_backend.set_window_size([2570.0f32, 1440.0f32]);
         });
 
-        // 注册一个键盘事件回调函数
-        egui_context.input(|i| {
-            if i.key_pressed(Key::Insert) {
-                println!("pressed");
-                self.menu_on = !self.menu_on;
-            }
-        });
 
-        // 计算上一帧到当前帧的时间间隔
-        let now = Instant::now();
-        let delta_time = now - self.last_frame_time;
-        self.last_frame_time = now;
-
-        // 计算每秒帧数
-        self.fps = 1.0 / delta_time.as_secs_f32();
         // just some controls to show how you can use glfw_backend
         // let mut da: Data = Data::default();
-        let overlay = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("overlay")),Rect::EVERYTHING);
+        let overlay = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("overlay")), Rect::EVERYTHING);
 
 
-
-        match self.da2.try_recv() {
+        match self.data_recv.try_recv() {
             Ok(data) => {
                 // println!("Received message from thread {:?}", data);
-                self.re_data = data;
+                self.data = data;
             }
-            Err(_) => { }
+            Err(_) => {}
         };
-        // println!("most far distance -> {}", self.re_data.get_near_pointer());
-        // self.re_data.draw_bones_width(overlay.clone());
-        self.re_data.cache_data.target.target_line(overlay.clone(), self.re_data.config.screen.center);
-        self.re_data.cache_data.target.bone_esp(overlay.clone(), 150.0);
-        for player in &self.re_data.cache_data.players {
+        // println!("most far distance -> {}", self.data.get_near_pointer());
+        // self.data.draw_bones_width(overlay.clone());
+        self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center);
+        self.data.cache_data.target.bone_esp(overlay.clone(), 999.0);
+        for player in &self.data.cache_data.players {
             // player.1.box_esp(overlay.clone());
             player.1.position_esp(overlay.clone());
             // player.1.target_line(overlay.clone());
         }
-        self.re_data.cache_data.target.target_line(overlay.clone(), self.re_data.config.screen.center);
-
-        if self.menu_on {
-
-            egui_backend::egui::Window::new("Debug").vscroll(true).show(egui_context, |ui| {
-                ui.set_width(450.0);
-                self.frame += 1;
+        overlay.circle_filled(self.data.config.screen.center, 3.0, Color32::RED);
+        self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center);
 
 
-                glfw_backend.window.set_decorated(false);
-                ui.label(format!("current frame number: {}", self.frame));
-                ui.label(format!("current fps: {}", self.fps as u32));
-                ui.label(format!("cursor pos x: {}", glfw_backend.cursor_pos[0]));
-                ui.label(format!("cursor pos y: {}", glfw_backend.cursor_pos[1]));
-                ui.label(format!(
-                    "passthrough: {}",
-                    glfw_backend.get_passthrough().unwrap()
-                ));
+        egui_backend::egui::Window::new("Debug").vscroll(true).show(egui_context, |ui| {
+            ui.set_width(450.0);
 
-                for i in &self.re_data.cache_data.players {
-                    i.1.dbg_view(ui);
+            glfw_backend.window.set_decorated(false);
+            ui.label(format!("current frame number: {}", self.menu_config.fps));
+            ui.label(format!("cursor pos x: {}", glfw_backend.cursor_pos[0]));
+            ui.label(format!("cursor pos y: {}", glfw_backend.cursor_pos[1]));
+            ui.label(format!(
+                "passthrough: {}",
+                glfw_backend.get_passthrough().unwrap()
+            ));
+
+            self.data.dbg_view(ui);
+            // ui.label(format!("local -> {:?}", self.data.cache_data.local_player));
+
+        });
+
+        egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
+            // ui.set_width(300.0);
+
+            ui.horizontal(|ui| {
+                if ui.button("restart dma connect").clicked() {
+                    self.restart_sender.send(true).expect("restart send failed");
+                    self.data = Data::default();
                 }
             });
 
+            edit_screen_size(&mut self.menu_config.config.screen, ui);
+            ui.vertical( |ui| {
 
-            egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
-                ui.set_width(300.0);
-                ui.horizontal( |ui| {
-                    ui.label("screen width -> ");
-                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[0]).speed(10.0));
-                });
-                ui.horizontal( |ui| {
-                    ui.label("screen height -> ");
-                    ui.add(egui_backend::egui::DragValue::new(&mut self.size[1]).speed(10.0));
+                edit_glow_config(&mut self.menu_config.config.glow, ui);
 
-                });
+                edit_esp_config(&mut self.menu_config.config.esp, ui);
+
+                edit_aimbot_config(&mut self.menu_config.config.aim, ui);
+                ui.label(format!("config: {:?}", self.menu_config.config));
+
             });
 
+        });
+        self.config_sender.send(self.menu_config.config).expect("config send failed");
 
-        }
-
-        // here you decide if you want to be passthrough or not.
         if egui_context.wants_pointer_input() || egui_context.wants_keyboard_input() {
             glfw_backend.window.set_mouse_passthrough(false);
         } else {

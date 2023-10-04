@@ -10,6 +10,7 @@ use crate::data::*;
 use crate::function::*;
 use crate::mem::*;
 use crate::math::*;
+use crate::menu::dbg_player;
 
 pub enum Cache {
     High, // near position
@@ -119,17 +120,18 @@ impl Data {
 
         // init local player
         self.cache_data.local_player.update_pointer(vp, self.base);
-        self.cache_data.local_player.status.initialize(vp, self.cache_data.local_player.pointer, self.base, 1);
         self.cache_data.local_player.update_position(vp);
         self.cache_data.local_player.update_bone_index(vp);
         self.cache_data.local_player.update_bone_position(vp);
+        self.cache_data.local_player.status.initialize(vp, self.cache_data.local_player.pointer, self.base, 1);
+
 
         // init other player
         for pointer in get_player_pointer_index(vp, base + CL_ENTITYLIST) {
             let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
-            player.status.initialize(vp, pointer[1], self.base, pointer[0]);
+            player.status.initialize(vp, player.pointer, self.base, player.index);
             if player.status.team_index == self.cache_data.local_player.status.team_index && player.status.team == self.cache_data.local_player.status.team {
-                // continue
+                continue
                 // pass local player
             }
 /*            if player.status.team == self.cache_data.local_player.status.team {
@@ -139,21 +141,20 @@ impl Data {
             player.update_bone_index(vp);
 
             player.update_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
+            player.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
             player.update_distance(vp, &self.cache_data.local_player.position);
-            player.update_bone_position(vp);
             // println!("distance -> {:?}", player.distance);
             // println!("pos -> {:?} pos -> {:?}", &player.position, &self.cache_data.local_player.position);
 
 
 
-            self.cache_pointer.cache_medium.push(pointer[1]);
-            self.cache_data.players.insert(pointer[1], player);
+            self.cache_pointer.cache_medium.push(player.pointer);
+            self.cache_data.players.insert(player.pointer, player);
         }
         println!("{}", self.cache_pointer.cache_medium.len());
     }
     pub fn update_basic(&mut self, vp: VmmProcess, distance: f32) {
-
-
+        // self.cache_data.local_player.update_position(vp);
         self.cache_data.local_player.update_bone_position(vp);
         self.cache_data.local_player.update_view_matrix(vp); // 500 µs
         self.cache_data.local_player.update_angle(vp); // 500 µs
@@ -179,7 +180,8 @@ impl Data {
     }
     pub fn update_target(&mut self, vp: VmmProcess, distance: f32) {
         self.cache_data.target =  self.get_near_crosshair_target(distance);
-        self.cache_data.target.update_bone_position(vp);
+
+        self.cache_data.target.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
         self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
     }
 /*    pub fn update_cache_high(&mut self, vp: VmmProcess) {
@@ -285,6 +287,10 @@ impl Data {
         }
 
     }*/
-
+    pub fn dbg_view(&self, ui: &mut Ui) {
+        for i in &self.cache_data.players {
+            dbg_player(i.1, ui);
+        }
+    }
 
 }

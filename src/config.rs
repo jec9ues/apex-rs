@@ -1,14 +1,17 @@
 use std::collections::HashMap;
+use std::time::Instant;
 use egui_backend::egui::Pos2;
 
 
 use rdev::Key;
 use crate::data::{Character, InputSystem};
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Copy, Clone)]
 pub struct Config {
-    pub character: HashMap<Character, CharacterConfig>,
-    pub aim: AimConfig,
+    // pub character: HashMap<Character, CharacterConfig>,
     pub screen: ScreenConfig,
+    pub aim: AimConfig,
+    pub glow: GlowConfig,
+    pub esp: EspConfig,
 }
 #[derive(Debug, Default, Copy, Clone)]
 pub struct CharacterConfig {
@@ -20,12 +23,15 @@ pub struct HitboxConfig {
 }
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AimConfig {
+    pub distance: f32,
     pub aim_assist: AimAssistConfig,
+    pub trigger_bot: TriggerBotConfig,
 }
 #[derive(Debug, Default, Copy, Clone)]
 pub struct AimAssistConfig {
     pub enable: bool,
-    pub smooth: f32,
+    pub yaw_smooth: f32,
+    pub pitch_smooth: f32,
     pub key: InputSystem,
 }
 #[derive(Debug, Default, Copy, Clone)]
@@ -35,8 +41,28 @@ pub struct TriggerBotConfig {
 }
 #[derive(Debug, Default, Copy, Clone)]
 pub struct EspConfig {
+    pub enable: bool,
     pub distance: f32,
+    pub delay: u16,
 
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct GlowConfig {
+    pub player_glow: PlayerGlowConfig,
+    pub item_glow: ItemGlowConfig,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct PlayerGlowConfig {
+    pub enable: bool,
+    pub delay: u16,
+}
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct ItemGlowConfig {
+    pub enable: bool,
+    pub delay: u16,
 }
 #[derive(Debug, Default, Copy, Clone)]
 pub struct ScreenConfig {
@@ -51,3 +77,18 @@ impl ScreenConfig {
         }
     }
 }
+
+#[derive(Debug, Default, Copy, Clone)]
+pub struct MenuConfig {
+    pub fps: f32,
+    pub config: Config,
+}
+
+impl MenuConfig {
+    #[inline]
+    pub fn update_fps(&mut self, last_frame_time: Instant) {
+        self.fps = 1.0 / (Instant::now() - last_frame_time).as_secs_f32();
+    }
+}
+
+

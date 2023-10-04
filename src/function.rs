@@ -15,6 +15,7 @@ use memprocfs::*;
 use pretty_hex::*;
 
 use mouse_rs::{types::keys::Keys, Mouse};
+use rdev::{EventType, simulate};
 use crate::data::{Bone, Player, Pos3};
 use crate::egui_overlay::egui::Pos2;
 
@@ -268,6 +269,18 @@ pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) -> u8 {
     println!("ammo -> {:?}", ammo);
     println!("semi_auto -> {:?}", semi_auto);
     selected_slot
+}
+
+pub fn send(event_type: &EventType) {
+    let delay = Duration::from_millis(20);
+    match simulate(event_type) {
+        Ok(()) => (),
+        Err(SimulateError) => {
+            println!("We could not send {:?}", event_type);
+        }
+    }
+    // Let ths OS catchup (at least MacOS)
+    sleep(delay);
 }
 
 

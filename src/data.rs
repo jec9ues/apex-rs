@@ -11,7 +11,6 @@ use crate::function::*;
 use crate::math::*;
 use crate::mem::*;
 use named_constants::named_constants;
-use crate::menu::dbg_ui;
 
 #[derive(Debug, Clone, Default)]
 pub struct Player {
@@ -96,7 +95,7 @@ pub struct Status {
     pub last_visible_time: f32,
     pub previous_last_visible_time: f32,
     pub last_crosshair_target_time: f32,
-    pub previous_crosshair_target_time: f32,
+    pub previous_last_crosshair_target_time: f32,
     pub skin: u16,
     pub character: Character,
     pub team: u16,
@@ -152,7 +151,7 @@ impl Status {
         // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
 
         self.last_visible_time = self.previous_last_visible_time;
-        self.previous_crosshair_target_time = self.last_crosshair_target_time;
+        self.previous_last_crosshair_target_time = self.last_crosshair_target_time;
 
         self.last_visible_time = data.read_f32(LAST_VISIBLE_TIME); // 0x19B0
         self.last_crosshair_target_time = data.read_f32(LAST_VISIBLE_TIME + 0x8); // 0x19B0
@@ -174,7 +173,7 @@ impl Status {
         !(self.last_visible_time == self.previous_last_visible_time)
     }
     pub fn target(&self) -> bool {
-        !(self.last_crosshair_target_time == self.previous_crosshair_target_time)
+        !(self.last_crosshair_target_time == self.previous_last_crosshair_target_time)
     }
     pub fn alive(&self) -> bool {
         !(self.dead > 0)
@@ -310,7 +309,7 @@ impl LocalPlayer {
 
     pub fn update_bone_position(&mut self, vp: VmmProcess) {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-
+        self.position = Pos3::from_array(vec_abs_origin);
         // float: 4 * matrix: 12 * bone: 200
         let data = read_mem(vp, self.bone_pointer, 4 * 12 * 20);
         // println!("{:?}", data.hex_dump());
@@ -391,9 +390,7 @@ impl Player {
         };
         res
     }
-    pub fn dbg_view(&self, ui: &mut Ui) {
-        dbg_ui(self, ui);
-    }
+
     pub fn position_esp(&self, ptr: Painter) {
         ptr.circle_filled(self.position_2d, 3.0, TEAM_COLOR[self.status.team as usize]);
         ptr.text(self.position_2d,
@@ -563,9 +560,10 @@ impl Player {
         // Ok(())
     }
 
-    pub fn update_bone_position(&mut self, vp: VmmProcess) {
+    pub fn update_bone_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
         self.position = Pos3::from_array(vec_abs_origin);
+        self.position_2d = world_to_screen(matrix, self.position, screen_size);
         // float: 4 * matrix: 12 * bone: 200
         let data = read_mem(vp, self.bone_pointer, 4 * 12 * 240);
         // println!("{:?}", data.hex_dump());
