@@ -151,7 +151,58 @@ impl Data {
             self.cache_pointer.cache_medium.push(player.pointer);
             self.cache_data.players.insert(player.pointer, player);
         }
-        println!("{}", self.cache_pointer.cache_medium.len());
+        // println!("{}", self.cache_pointer.cache_medium.len());
+    }
+    pub fn update_cache(&mut self, vp: VmmProcess) {
+        let mut now_pointer = get_player_pointer(vp, self.base + CL_ENTITYLIST);
+        now_pointer.retain(|&x| x == self.cache_data.local_player.pointer);
+        let mut null_pointer_remove: Vec<u64> = Vec::new();
+        if now_pointer.len() != self.cache_pointer.cache_medium.len() {
+            let now_list = get_player_pointer_index(vp, self.base + CL_ENTITYLIST);
+
+            for pointer in &self.cache_pointer.cache_medium {
+                if now_pointer.contains(pointer) {
+                    // remove null pointer
+                    null_pointer_remove.push(*pointer);
+
+                }
+            }
+
+            self.cache_pointer.cache_medium.retain(|&x| !null_pointer_remove.contains(&x));
+
+            for &pointer_value in &null_pointer_remove {
+                self.cache_data.players.remove(&pointer_value);
+            }
+
+            for pointer in now_list {
+
+                let mut player = Player { index: pointer[0], pointer: pointer[1], ..Default::default() };
+
+                if player.status.team_index == self.cache_data.local_player.status.team_index && player.status.team == self.cache_data.local_player.status.team {
+                    continue
+                    // pass local player
+                }
+
+                if self.cache_pointer.cache_medium.contains(&player.pointer) {
+                    // pass exist pointer
+                    continue
+
+                } else {
+                    player.update_pointer(vp);
+                    player.update_bone_index(vp);
+
+                    // player.update_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
+                    player.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
+                    player.update_distance(vp, &self.cache_data.local_player.position);
+
+
+                    // push new pointer
+                    self.cache_pointer.cache_medium.push(player.pointer);
+                    self.cache_data.players.insert(player.pointer, player);
+                }
+            }
+        }
+
     }
     pub fn update_basic(&mut self, vp: VmmProcess, distance: f32) {
         // self.cache_data.local_player.update_position(vp);
@@ -289,6 +340,7 @@ impl Data {
     }*/
     pub fn dbg_view(&self, ui: &mut Ui) {
         for i in &self.cache_data.players {
+
             dbg_player(i.1, ui);
         }
     }

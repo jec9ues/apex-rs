@@ -15,6 +15,7 @@ use crate::data::*;
 use crate::function::*;
 use crate::math::*;
 use rdev::*;
+use rdev::EventType::KeyPress;
 use crate::config::{Config, ScreenConfig};
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
@@ -313,7 +314,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         }
         match config_recv.try_recv() {
             Ok(config) => {
-                println!("in");
+                // println!("in");
                 data.config = config;
                 data.config.screen = ScreenConfig::new([2560.0, 1440.0]);
                 // println!("config -> {:?}", data.config);
@@ -339,49 +340,75 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                     println!("pos1 -> {:?}", pos);
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
-
-        data.update_basic(vp, data.config.esp.distance); // ~ 5ms per player
-        data.update_target(vp, data.config.aim.distance);
-        // println!("target name -> {}", data.cache_data.target.status.name);
         data.update_status(vp);
-        if delay & data.config.esp.delay == 0 {
-            data.update_basic(vp, f32::MAX); // ~ 5ms per player
-        }
+        data.update_cache(vp);
+        if data.config.esp.enable || data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
+            data.update_basic(vp, data.config.esp.distance); // ~ 5ms per player
+            data.update_target(vp, data.config.aim.distance);
 
-        // im_player_glow(vp, base, data.cache_data.local_player.status.team);
-
-        // data.re_cache_pointer(vp);
-
-
-        let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.neck.position);
-        let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, data.cache_data.target.hitbox.neck.position);
-        // data.cache_data.local_player.set_pitch(vp, pitch);
-        let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
-        let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
-        let angle_delta_abs = angle_delta.abs();
-
-        let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / data.config.aim.aim_assist.yaw_smooth);
-        let new_pitch = data.cache_data.local_player.pitch + pitch_delta / data.config.aim.aim_assist.pitch_smooth;
-
-
-        // println!("slot -> {}", weaponx_entity(vp, data.cache_data.local_player.pointer, base));
-
-        // last_time = data.cache_data.target.status.last_crosshair_target_time;
-        // println!("calculate pitch -> {}, yaw -> {}", angle_delta, data.config.aim.aim_assist.yaw_smooth);
-        println!("visible -> {}", data.cache_data.target.status.visible());
-        if data.cache_data.target.status.visible() {
-            if data.key.get_key_state(InputSystem::KEY_XBUTTON_LEFT_SHOULDER) || data.key.get_key_state(InputSystem::MOUSE_RIGHT){
-                // data.cache_data.local_player.set_yaw(vp, new_yaw);
-                // data.cache_data.local_player.set_pitch(vp, new_pitch);
-                data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
-
+            if delay & data.config.esp.delay == 0 {
+                data.update_basic(vp, f32::MAX); // ~ 5ms per player
             }
         }
 
-        // last_vis = data.cache_data.target.status.last_visible_time;
-        // println!("button state -> {}", get_button_state(107, vp, base));
-        // println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
-        // println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);
+        // println!("target name -> {}", data.cache_data.target.status.name);
+        // im_player_glow(vp, base, data.cache_data.local_player.status.team);
+        // data.re_cache_pointer(vp);
+        println!("{:?}", data.cache_data.target);
+        if data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
+            let target_bone = data.cache_data.target.get_nearest_bone(data.config.screen.center);
+            let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, target_bone.position);
+            let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, target_bone.position);
+            // let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
+            // let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
+
+            // let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
+            // let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
+
+            let distance_to_target = data.cache_data.target.position_2d.distance(data.config.screen.center);
+
+            let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
+            let angle_delta_smooth = calculate_delta_smooth(distance_to_target, data.config.aim.aim_assist.yaw_smooth, data.config.aim.aim_assist.yaw_curve_factor);
+
+            let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
+            let pitch_delta_smooth = calculate_delta_smooth(distance_to_target,  data.config.aim.aim_assist.pitch_smooth, data.config.aim.aim_assist.pitch_curve_factor);
+
+            let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / angle_delta_smooth);
+            let new_pitch = data.cache_data.local_player.pitch + pitch_delta / pitch_delta_smooth;
+            // println!("calculate pitch -> {}, yaw -> {}", new_pitch, new_yaw);
+            if data.cache_data.target.status.visible() {
+                if data.key.get_key_state(data.config.aim.aim_assist.key) {
+                    // data.cache_data.local_player.set_yaw(vp, new_yaw);
+                    // data.cache_data.local_player.set_pitch(vp, new_pitch);
+                    data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
+
+                }
+                if data.config.aim.trigger_bot.enable {
+                    if data.cache_data.target.status.target() {
+                        if data.key.get_key_state(data.config.aim.trigger_bot.key) {
+                            // data.cache_data.local_player.set_yaw(vp, new_yaw);
+                            // data.cache_data.local_player.set_pitch(vp, new_pitch);
+                            if data.cache_data.target.hitbox_check(data.config.screen.center, data.config.aim.trigger_bot.hitbox_size) {
+                                sleep(Duration::from_micros(data.config.aim.trigger_bot.delay));
+                                send(&EventType::ButtonPress(Button::Left));
+                                send(&EventType::ButtonRelease(Button::Left));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+/*        data.cache_data.local_player.set_pitch(vp, pitch);
+        let angle_delta_abs = angle_delta.abs();
+        println!("slot -> {}", weaponx_entity(vp, data.cache_data.local_player.pointer, base));
+        last_time = data.cache_data.target.status.last_crosshair_target_time;
+        println!("calculate pitch -> {}, yaw -> {}", angle_delta, data.config.aim.aim_assist.yaw_smooth);
+        println!("visible -> {}", data.cache_data.target.status.visible());
+        last_vis = data.cache_data.target.status.last_visible_time;
+        println!("button state -> {}", get_button_state(107, vp, base));
+        println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
+        println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);*/
 
 
         let end_time = Instant::now();

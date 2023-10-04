@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::error::Error;
-use std::f32;
 use std::fmt::{Display, format, Formatter};
 use egui_backend::egui::*;
 use log::*;
@@ -11,6 +10,7 @@ use crate::function::*;
 use crate::math::*;
 use crate::mem::*;
 use named_constants::named_constants;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default)]
 pub struct Player {
@@ -150,7 +150,7 @@ impl Status {
         // let player_datas = read_u16(vp, player_data_ptr + LEGENDARY_MODEL_INDEX);
         // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
 
-        self.last_visible_time = self.previous_last_visible_time;
+        self.previous_last_visible_time = self.last_visible_time;
         self.previous_last_crosshair_target_time = self.last_crosshair_target_time;
 
         self.last_visible_time = data.read_f32(LAST_VISIBLE_TIME); // 0x19B0
@@ -170,9 +170,11 @@ impl Status {
     }
 
     pub fn visible(&self) -> bool {
+        // (self.last_visible_time - self.previous_last_visible_time) > 0.01
         !(self.last_visible_time == self.previous_last_visible_time)
     }
     pub fn target(&self) -> bool {
+        // (self.last_crosshair_target_time - self.previous_last_crosshair_target_time).abs() < 1.0
         !(self.last_crosshair_target_time == self.previous_last_crosshair_target_time)
     }
     pub fn alive(&self) -> bool {
@@ -231,6 +233,9 @@ impl LocalPlayer {
         self.yaw = *angle.get(1).unwrap();
     }
     pub fn set_angle(&mut self, vp: VmmProcess, pitch: f32, yaw: f32) {
+        if pitch.is_infinite() || yaw.is_infinite() {
+            return;
+        }
         let mut angle: Vec<f32> = Vec::new();
         angle.push(pitch);
         angle.push(yaw);
@@ -399,7 +404,7 @@ impl Player {
                  FontId::default(),
                  Color32::LIGHT_BLUE);
     }
-    pub fn bone_esp(&self, ptr: Painter, distance: f32) {
+    pub fn bone_esp(&self, ptr: Painter, distance: f32, color: Color32) {
         if self.status.dead > 0 || self.distance > distance {
             return;
         };
@@ -451,13 +456,13 @@ impl Player {
 
         ptr.add(
             Shape::line(body,
-                        Stroke::new(2.0, Color32::WHITE)));
+                        Stroke::new(2.0, color)));
         ptr.add(
             Shape::line(hand,
-                        Stroke::new(2.0, Color32::WHITE)));
+                        Stroke::new(2.0, color)));
         ptr.add(
             Shape::line(leg,
-                        Stroke::new(2.0, Color32::WHITE)));
+                        Stroke::new(2.0, color)));
 /*        ptr.text(self.hitbox.head.position_2d,
                  Align2::CENTER_BOTTOM,
                  self.status.skin.to_string(),
@@ -483,9 +488,15 @@ impl Player {
 
     }
     pub fn target_line(&self, ptr: Painter, center: Pos2) {
+        if self.position_2d == Pos2::ZERO {
+            return;
+        }
+        let nearest_bone = self.get_nearest_bone(center).position_2d;
         ptr.line_segment(
-            [self.position_2d, center],
-            Stroke::new(4.0, Color32::RED));
+            [nearest_bone, center],
+            Stroke::new(2.0, Color32::RED));
+
+        ptr.circle_stroke(nearest_bone, 4.0, Stroke::new(2.0, Color32::GREEN));
     }
 
     pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
@@ -562,6 +573,7 @@ impl Player {
 
     pub fn update_bone_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
         let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
+
         self.position = Pos3::from_array(vec_abs_origin);
         self.position_2d = world_to_screen(matrix, self.position, screen_size);
         // float: 4 * matrix: 12 * bone: 200
@@ -713,6 +725,43 @@ impl Player {
         for bone in bones.iter_mut() {
             bone.position_2d = world_to_screen(matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
         };
+    }
+
+    pub fn get_nearest_bone(&self, screen_center: Pos2) -> Bone {
+        let mut last_distance: f32 = f32::MAX;
+        let mut nearest_bone: Bone = Bone::default();
+        let mut bones = [
+            &self.hitbox.head,
+            &self.hitbox.neck,
+            &self.hitbox.upper_chest,
+            &self.hitbox.lower_chest,
+            &self.hitbox.stomach,
+            &self.hitbox.hip,
+            &self.hitbox.left_shoulder,
+            &self.hitbox.left_elbow,
+            &self.hitbox.left_hand,
+            &self.hitbox.right_shoulder,
+            &self.hitbox.right_elbow,
+            &self.hitbox.right_hand,
+            &self.hitbox.left_thigh,
+            &self.hitbox.left_knee,
+            &self.hitbox.left_foot,
+            &self.hitbox.right_thigh,
+            &self.hitbox.right_knee,
+            &self.hitbox.right_foot,
+        ];
+
+        for bone in bones.iter() {
+            if bone.position_2d.distance(screen_center).abs() < last_distance {
+                nearest_bone = **bone;
+                last_distance = bone.position_2d.distance(screen_center).abs();
+            }
+        }
+        nearest_bone
+    }
+
+    pub fn hitbox_check(&self, screen_center: Pos2, hitbox_size: f32) -> bool {
+        self.get_nearest_bone(screen_center).position_2d.distance(screen_center) < hitbox_size
     }
 }
 
@@ -954,7 +1003,7 @@ pub struct DataTable {
 
 
 #[named_constants]
-#[derive(Default, Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum InputSystem {
     KEY_NONE,

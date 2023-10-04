@@ -22,7 +22,7 @@ use std::thread;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
-use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape, Stroke, Key};
+use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape, Stroke, Key, CollapsingHeader, RichText};
 
 use egui_backend::egui::plot::{Line, Plot, PlotPoints};
 
@@ -91,7 +91,7 @@ fn main() {
 
 
     egui_overlay::start(Menu {
-        last_frame_time: Instant::now(),
+        fps: FpsCounter::new(),
         data: Data::default(),
         data_recv: data_receiver,
         menu_config: MenuConfig::default(),
@@ -102,7 +102,7 @@ fn main() {
 
 // TODO: config channel
 pub struct Menu {
-    pub last_frame_time: Instant,
+    pub fps: FpsCounter,
 
     pub data: Data,
     pub data_recv: Receiver<Data>,
@@ -143,22 +143,34 @@ impl EguiOverlay for Menu {
         };
         // println!("most far distance -> {}", self.data.get_near_pointer());
         // self.data.draw_bones_width(overlay.clone());
-        self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center);
-        self.data.cache_data.target.bone_esp(overlay.clone(), 999.0);
-        for player in &self.data.cache_data.players {
-            // player.1.box_esp(overlay.clone());
-            player.1.position_esp(overlay.clone());
-            // player.1.target_line(overlay.clone());
+        if self.menu_config.config.esp.enable {
+            self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center);
+            if self.data.cache_data.target.status.visible() {
+                self.data.cache_data.target.bone_esp(overlay.clone(), 999.0, Color32::GREEN);
+            } else {
+                self.data.cache_data.target.bone_esp(overlay.clone(), 999.0, Color32::RED);
+            }
+
+            // overlay.circle_stroke(self.data.cache_data.target.get_nearest_bone(self.menu_config.config.screen.center).position_2d, self.menu_config.config.aim.aim_assist.zone, Stroke::new(3.0, Color32::RED));
+            for player in &self.data.cache_data.players {
+                // player.1.box_esp(overlay.clone());
+                if player.1.distance < self.menu_config.config.esp.distance {
+                    player.1.position_esp(overlay.clone());
+                }
+
+                // player.1.target_line(overlay.clone());
+            }
         }
-        overlay.circle_filled(self.data.config.screen.center, 3.0, Color32::RED);
-        self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center);
+
+
 
 
         egui_backend::egui::Window::new("Debug").vscroll(true).show(egui_context, |ui| {
             ui.set_width(450.0);
 
             glfw_backend.window.set_decorated(false);
-            ui.label(format!("current frame number: {}", self.menu_config.fps));
+            self.fps.update();
+            ui.label(format!("current fps: {}", self.fps.fps()));
             ui.label(format!("cursor pos x: {}", glfw_backend.cursor_pos[0]));
             ui.label(format!("cursor pos y: {}", glfw_backend.cursor_pos[1]));
             ui.label(format!(
@@ -194,7 +206,46 @@ impl EguiOverlay for Menu {
             });
 
         });
-        self.config_sender.send(self.menu_config.config).expect("config send failed");
+
+        egui_backend::egui::Window::new("Curve Preview").show(egui_context, |ui| {
+            CollapsingHeader::new(RichText::new("yaw curve preview"))
+                .default_open(false)
+                .show(ui, |ui| {
+                    ui.vertical( |ui| {
+                        let sin: PlotPoints = (1..1000).step_by(1).map(|i| {
+                            let x = calculate_delta_smooth(i as f32, self.menu_config.config.aim.aim_assist.yaw_smooth, self.menu_config.config.aim.aim_assist.yaw_curve_factor) as f64;
+                            [x , x.powi(2)]
+                        }).collect();
+                        let line = Line::new(sin);
+                        Plot::new("yaw curve preview")
+                            .view_aspect(1.0)
+                            .show_axes([true, true])
+                            .show(ui, |plot_ui| plot_ui.line(line));
+                    });
+                });
+
+
+            CollapsingHeader::new(RichText::new("pitch curve preview"))
+                .default_open(false)
+                .show(ui, |ui| {
+                    ui.vertical( |ui| {
+                        let sin: PlotPoints = (1..1000).step_by(1).map(|i| {
+                            let x = calculate_delta_smooth(i as f32, self.menu_config.config.aim.aim_assist.pitch_smooth, self.menu_config.config.aim.aim_assist.pitch_curve_factor) as f64;
+                            [x , x.powi(2)]
+                        }).collect();
+                        let line = Line::new(sin);
+                        Plot::new("pitch curve preview")
+                            .view_aspect(1.0)
+                            .show_axes([true, true])
+                            .show(ui, |plot_ui| plot_ui.line(line));
+                    });
+                });
+
+        });
+        match self.config_sender.try_send(self.menu_config.config) {
+            Ok(_) => {}
+            Err(_) => {}
+        }
 
         if egui_context.wants_pointer_input() || egui_context.wants_keyboard_input() {
             glfw_backend.window.set_mouse_passthrough(false);

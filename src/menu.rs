@@ -1,9 +1,12 @@
 use egui_backend::egui;
-use egui_backend::egui::{CollapsingHeader, Color32, ComboBox, DragValue, RichText, Slider, Ui, Widget, WidgetText};
+use egui_backend::egui::{CollapsingHeader, Color32, ComboBox, DragValue, Id, RichText, Slider, Ui, Widget, WidgetText};
+use egui_backend::egui::plot::{Line, Plot, PlotPoints};
 use crate::config::{AimConfig, EspConfig, GlowConfig, ScreenConfig};
 
 
 use crate::data::*;
+use crate::function::calculate_delta_smooth;
+
 pub fn dbg_status(status: &Status, ui: &mut Ui) {
     CollapsingHeader::new(format!("{}'s status", status.name))
         .default_open(false)
@@ -70,6 +73,12 @@ pub fn dbg_status(status: &Status, ui: &mut Ui) {
                     }
                 });
                 ui.horizontal(|ui| {
+                    ui.label(format!("visible -> {}", status.visible()));
+                    if ui.button("📋").clicked() {
+                        ui.output_mut(|o| o.copied_text = status.visible().to_string());
+                    }
+                });
+                ui.horizontal(|ui| {
                     ui.label(format!("last_crosshair_target_time -> {}", status.last_crosshair_target_time));
                     if ui.button("📋").clicked() {
                         ui.output_mut(|o| o.copied_text = status.last_crosshair_target_time.to_string());
@@ -79,6 +88,12 @@ pub fn dbg_status(status: &Status, ui: &mut Ui) {
                     ui.label(format!("previous_last_crosshair_target_time -> {}", status.previous_last_crosshair_target_time));
                     if ui.button("📋").clicked() {
                         ui.output_mut(|o| o.copied_text = status.previous_last_crosshair_target_time.to_string());
+                    }
+                });
+                ui.horizontal(|ui| {
+                    ui.label(format!("crosshair target -> {}", status.target()));
+                    if ui.button("📋").clicked() {
+                        ui.output_mut(|o| o.copied_text = status.target().to_string());
                     }
                 });
                 ui.horizontal(|ui| {
@@ -163,6 +178,7 @@ pub fn edit_screen_size(screen_size: &mut ScreenConfig, ui: &mut Ui) {
 }
 
 pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
+
     ui.group( |ui| {
 
         // aim config
@@ -173,9 +189,16 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                 ui.checkbox(&mut aim_config.aim_assist.enable, "enable aim assist");
 
                 ui.horizontal( |ui| {
-                    ui.label("pitch smooth -> ");
+                    ui.label("yaw curve factor -> ");
                     ui.add(
-                        Slider::new(&mut aim_config.aim_assist.pitch_smooth, 1.0..=100.0).step_by(1.0)
+                        Slider::new(&mut aim_config.aim_assist.yaw_curve_factor, 10.0..=300.0).step_by(10.0)
+                    );
+                });
+
+                ui.horizontal( |ui| {
+                    ui.label("pitch curve factor -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.aim_assist.pitch_curve_factor, 10.0..=300.0).step_by(10.0)
                     );
                 });
 
@@ -186,6 +209,13 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                     );
                 });
 
+                ui.horizontal( |ui| {
+                    ui.label("pitch smooth -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.aim_assist.pitch_smooth, 1.0..=100.0).step_by(1.0)
+                    );
+                });
+
                 combobox_key(&mut aim_config.aim_assist.key, ui, "aim assist bind key");
 
             });
@@ -193,6 +223,20 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
             ui.vertical( |ui| {
 
                 ui.checkbox(&mut aim_config.trigger_bot.enable, "enable trigger bot");
+
+                ui.horizontal( |ui| {
+                    ui.label("delay -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.trigger_bot.delay, 1..=1000).step_by(1.0)
+                    );
+                });
+
+                ui.horizontal( |ui| {
+                    ui.label("hitbox size -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.trigger_bot.hitbox_size, 1.0..=50.0).step_by(1.0)
+                    );
+                });
 
                 combobox_key(&mut aim_config.trigger_bot.key, ui, "trigger bot bind key");
             });

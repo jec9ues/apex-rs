@@ -34,7 +34,7 @@ fn move_and_press() {
 pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
     const SIZE: usize = (60 << 5);
     // add (1 << 5) skip CWorld
-    let data = read_mem(vp, addr + (1 << 5), SIZE);
+    let data = read_mem(vp, addr, SIZE);
 
     data.chunks_exact(0x20)
         .map(|chunk| u64::from_le_bytes(chunk[..8].try_into().unwrap()))
@@ -283,8 +283,45 @@ pub fn send(event_type: &EventType) {
     sleep(delay);
 }
 
+pub struct FpsCounter {
+    frame_count: u32,
+    last_fps_update: Instant,
+    fps: f32,
+}
+
+impl FpsCounter {
+    pub fn new() -> Self {
+        FpsCounter {
+            frame_count: 0,
+            last_fps_update: Instant::now(),
+            fps: 0.0,
+        }
+    }
+
+    pub fn update(&mut self) {
+        self.frame_count += 1;
+        let now = Instant::now();
+        let elapsed = now.duration_since(self.last_fps_update);
+        if elapsed >= Duration::from_secs(1) {
+            // Calculate FPS
+            self.fps = (self.frame_count as f32) / elapsed.as_secs_f32();
+            // Reset counters
+            self.frame_count = 0;
+            self.last_fps_update = now;
+        }
+    }
+
+    pub fn fps(&self) -> f32 {
+        self.fps
+    }
+}
 
 
 
 
-
+pub fn calculate_delta_smooth(distance: f32, smooth: f32, curve_factor: f32) -> f32 {
+    let smooth_factor = 1.0 / distance; // distance 倒数
+    let angle_delta =  smooth / smooth_factor / curve_factor;
+    // println!("distance -> {}, smooth_factor -> {} angle_delta -> {}", distance, smooth_factor, angle_delta);
+    angle_delta
+}
