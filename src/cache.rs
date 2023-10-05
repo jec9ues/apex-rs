@@ -108,7 +108,7 @@ impl Data {
                     if player.status.team == self.cache_data.local_player.status.team { continue }
                 }
 
-                if player.position_2d == Pos2::ZERO || player.distance > distance || player.status.dead > 0 || player.status.knocked > 0 { continue }
+                if player.position == Pos3::ZERO || player.distance > distance || player.status.dead > 0 || player.status.knocked > 0 { continue }
 
                 let dis = distance2d(&self.config.screen.center, &player.position_2d);
                 if last_distance > dis{
@@ -162,11 +162,11 @@ impl Data {
     pub fn update_cache(&mut self, vp: VmmProcess) {
         // local player + players
         let mut now_pointer = get_player_pointer(vp, self.base + CL_ENTITYLIST);
-        println!("now {:?}", now_pointer);
+        println!("now {:?}", now_pointer.len());
         now_pointer.retain(|&x| x != self.cache_data.local_player.pointer);
-        println!("remove now {:?}", now_pointer);
+        println!("remove now {:?}", now_pointer.len());
         let mut null_pointer_remove: Vec<u64> = Vec::new();
-        if now_pointer.len() != self.cache_pointer.cache_medium.len() {
+        if now_pointer.len() - 1 != self.cache_pointer.cache_medium.len() {
             let now_list = get_player_pointer_index(vp, self.base + CL_ENTITYLIST);
 
             for pointer in &self.cache_pointer.cache_medium {

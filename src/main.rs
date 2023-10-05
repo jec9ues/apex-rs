@@ -179,7 +179,7 @@ impl EguiOverlay for Menu {
             ));
 
             self.data.dbg_view(ui);
-            // ui.label(format!("local -> {:?}", self.data.cache_data.local_player));
+            // ui.label(format!("{:?}", self.data.cache_data.target));
 
         });
 
