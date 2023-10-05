@@ -750,13 +750,7 @@ impl Player {
             &self.hitbox.lower_chest,
             &self.hitbox.stomach,
             &self.hitbox.hip,
-            &self.hitbox.left_shoulder,
 
-            &self.hitbox.right_shoulder,
-
-            &self.hitbox.left_thigh,
-
-            &self.hitbox.right_thigh,
 
         ];
 

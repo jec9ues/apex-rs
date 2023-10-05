@@ -230,7 +230,7 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                 ui.horizontal(|ui| {
                     ui.label("hitbox size -> ");
                     ui.add(
-                        Slider::new(&mut aim_config.trigger_bot.hitbox_size, 1.0..=50.0).step_by(1.0)
+                        Slider::new(&mut aim_config.trigger_bot.hitbox_size, 1.0..=200.0).step_by(1.0)
                     );
                 });
 
@@ -277,14 +277,20 @@ pub fn edit_glow_config(glow_config: &mut GlowConfig, ui: &mut Ui) {
                 ui.horizontal(|ui| {
                     ui.label("delay -> ");
                     ui.add(
-                        Slider::new(&mut glow_config.item_glow.delay, 1..=1000).step_by(1.0)
+                        Slider::new(&mut glow_config.item_glow.delay, 1..=3000).step_by(1.0)
                     );
                 });
             });
 
             ui.vertical(|ui| {
-
-                ui.color_edit_button_rgb(&mut glow_config.color);
+                ui.horizontal(|ui| {
+                    ui.label("visible color -> ");
+                    ui.color_edit_button_rgb(&mut glow_config.visible_color);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("invisible color -> ");
+                    ui.color_edit_button_rgb(&mut glow_config.invisible_color);
+                });
             });
         });
     });

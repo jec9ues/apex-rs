@@ -58,7 +58,8 @@ pub struct EspConfig {
 
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct GlowConfig {
-    pub color: [f32; 3],
+    pub visible_color: [f32; 3],
+    pub invisible_color: [f32; 3],
     pub player_glow: PlayerGlowConfig,
     pub item_glow: ItemGlowConfig,
 }

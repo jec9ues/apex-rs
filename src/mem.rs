@@ -291,7 +291,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     println!("{:?}", path);
     let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
     // let vmm = Vmm::new(path, &vmm_args).unwrap();
-    let vmm = Vmm::new("D:\\Rust\\backend_menu\\target\\debug\\vmm.dll", &vmm_args).unwrap();
+    let vmm = Vmm::new("D:\\MEM\\vmm.dll", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");
@@ -400,11 +400,16 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
                 [r, g, b]
             }*/
-            im_player_glow(vp, data.base, 60, data.config.glow.color, false);
+            if data.cache_data.target.status.visible() {
+                im_player_glow(vp, data.base, 60, data.config.glow.visible_color, false);
+            } else {
+                im_player_glow(vp, data.base, 60, data.config.glow.invisible_color, false);
+            }
+
         }
 
         if data.config.glow.item_glow.enable && (delay & data.config.glow.item_glow.delay == 0) {
-            im_player_glow(vp, data.base, 15000,data.config.glow.color,  true);
+            im_player_glow(vp, data.base, 15000,data.config.glow.visible_color,  true);
         }
         // println!("target name -> {}", data.cache_data.target.status.name);
         // im_player_glow(vp, base, data.cache_data.local_player.status.team);

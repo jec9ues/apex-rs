@@ -34,7 +34,7 @@ fn move_and_press() {
 pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
     const SIZE: usize = (60 << 5);
     // add (1 << 5) skip CWorld
-    let data = read_mem(vp, addr + (1 << 5), SIZE);
+    let data = read_mem(vp, addr, SIZE);
 
     data.chunks_exact(0x20)
         .map(|chunk| u64::from_le_bytes(chunk[..8].try_into().unwrap()))
@@ -45,7 +45,7 @@ pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
 pub fn get_player_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
     const SIZE: usize = (60 << 5);
     // add (1 << 5) skip CWorld
-    let data = read_mem(vp, addr + (1 << 5), SIZE);
+    let data = read_mem(vp, addr, SIZE);
 
     data.chunks_exact(0x20)
         .enumerate()
@@ -162,11 +162,11 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u64, color: [f32; 3], check_
 
         let highlightSettingsPtr = read_u64(vp, addr + OFFSET_HIGHLIGHTSETTINGS);
         // println!("highlightSettingsPtr -> {:x}", highlightSettingsPtr);
-        write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 138, 64, 64].to_vec());
+        write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 129, 70, 64].to_vec());
 
-        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8, color[0]);
-        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x4, color[1]);
-        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x8, color[2]);
+        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8, color[0] * 3.0);
+        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x4, color[1] * 3.0);
+        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x8, color[2] * 3.0);
         // let local_ptr = read_u64(vp, addr + LOCAL_PLAYER);
         //
         // write_u16(vp, chunk_u64 + TEAM_NUM, read_u16(vp, local_ptr + TEAM_NUM));
