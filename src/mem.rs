@@ -3,7 +3,8 @@ extern crate core;
 
 use log4rs;
 use std::mem::size_of;
-use std::{thread, time};
+use std::{env, thread, time};
+use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
@@ -113,7 +114,7 @@ pub fn read_f32_vec(vp: VmmProcess, addr: u64, amount: usize) -> Vec<f32> {
 }
 
 pub fn read_string(vp: VmmProcess, addr: u64) -> String {
-    const SIZE: usize = 24; // 假设最大字符串长度为 32，可以根据实际情况调整
+    const SIZE: usize = 32; // 假设最大字符串长度为 32，可以根据实际情况调整
 
     let data = read_mem(vp, addr, SIZE);
 
@@ -274,10 +275,23 @@ impl ContinuingData {
 
 /// send: data, recv: config
 pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restart_receiver: Receiver<bool>) {
+    let mut path = PathBuf::new();
+    match env::current_dir() {
+        Ok(mut current_dir) => {
+            current_dir.push("vmm.dll");
+            println!("Current directory: {:?}", current_dir);
+            path = current_dir
+        }
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+        }
+    }
     println!("DMA for Apex - START");
-
+    let path = path.to_str().unwrap();
+    println!("{:?}", path);
     let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
-    let vmm = Vmm::new("D:\\MEM\\vmm.dll", &vmm_args).unwrap();
+    // let vmm = Vmm::new(path, &vmm_args).unwrap();
+    let vmm = Vmm::new("D:\\Rust\\backend_menu\\target\\debug\\vmm.dll", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");
@@ -300,6 +314,15 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         panic!("r5apex.exe base address not found!");
     }
 
+    loop {
+        if read_string(vp, base + LEVEL_NAME) == "mp_lobby" {
+            println!("in lobby, take a short break");
+            sleep(Duration::from_secs(20));
+        } else {
+            break
+        }
+    }
+
 
     // entity.update_pointer(vp);
     // entity.update_bone_index(vp);
@@ -307,16 +330,20 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     data.initialize(vp, base);
     let mut delay: u16 = 0;
 
-    data.config.screen = ScreenConfig::new([2560.0, 1440.0]);
+    // data.config.load();
     loop {
         if delay == u16::MAX {
             delay = u16::MIN;
+            if read_string(vp, base + LEVEL_NAME) == "mp_lobby" {
+                println!("in lobby, take a short break");
+                break
+            }
         }
         match config_recv.try_recv() {
             Ok(config) => {
                 // println!("in");
                 data.config = config;
-                data.config.screen = ScreenConfig::new([2560.0, 1440.0]);
+                data.config.screen = ScreenConfig::new([data.config.screen.size.x, data.config.screen.size.y]);
                 // println!("config -> {:?}", data.config);
             }
             Err(_) => {}
@@ -350,11 +377,39 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                 data.update_basic(vp, f32::MAX); // ~ 5ms per player
             }
         }
+        if data.config.glow.player_glow.enable && (delay & data.config.glow.player_glow.delay == 0) {
+/*            let mut i = 0.0; // 当前位置
 
+            loop {
+                let color: [f32; 3] = rainbow_color(i);
+
+                // 输出 RGB 值（范围在 0.0 到 1.0 之间）
+                // println!("RGB({}, {}, {})", r, g, b);
+
+                i += 0.01; // 调整步长
+
+                if i >= 1.0 {
+                    i = 0.0; // 重置到0，实现循环
+                }
+            }
+            fn rainbow_color(t: f32) -> [f32; 3] {
+                // 根据标准化值 t 计算 RGB 颜色
+                let r = (t * 2.0 - 1.0).max(0.0).min(1.0); // 红色分量
+                let g = (-t * 2.0 + 2.0).max(0.0).min(1.0); // 绿色分量
+                let b = (t * 2.0).max(0.0).min(1.0); // 蓝色分量
+
+                [r, g, b]
+            }*/
+            im_player_glow(vp, data.base, 60, data.config.glow.color, false);
+        }
+
+        if data.config.glow.item_glow.enable && (delay & data.config.glow.item_glow.delay == 0) {
+            im_player_glow(vp, data.base, 15000,data.config.glow.color,  true);
+        }
         // println!("target name -> {}", data.cache_data.target.status.name);
         // im_player_glow(vp, base, data.cache_data.local_player.status.team);
         // data.re_cache_pointer(vp);
-        println!("{:?}", data.cache_data.target);
+        // println!("{:?}", data.cache_data.target);
         if data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
             let target_bone = data.cache_data.target.get_nearest_bone(data.config.screen.center);
             let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, target_bone.position);
@@ -413,7 +468,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
-        // println!("Loop time -> {:?}", elapsed_time);
+        println!("Loop time -> {:?}", elapsed_time);
 
         data_sender.send(data.clone()).expect("data send failed");
 

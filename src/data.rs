@@ -403,6 +403,17 @@ impl Player {
                  format!("{:?}", self.status.name),
                  FontId::default(),
                  Color32::LIGHT_BLUE);
+        ptr.line_segment(
+            [Pos2 {x: self.position_2d.x + 20.0 , y: self.position_2d.y + 10.0},
+                    Pos2 {x: self.position_2d.x + 20.0 , y: self.position_2d.y + 10.0 - self.status.health as f32 / 3.0}],
+            Stroke::new( 4.0, Color32::GREEN)
+        );
+
+        ptr.line_segment(
+            [Pos2 {x: self.position_2d.x + 25.0 , y: self.position_2d.y + 10.0},
+                Pos2 {x: self.position_2d.x + 25.0 , y: self.position_2d.y + 10.0 - self.status.shield as f32 / 3.0}],
+            Stroke::new( 4.0, Color32::BLUE)
+        );
     }
     pub fn bone_esp(&self, ptr: Painter, distance: f32, color: Color32) {
         if self.status.dead > 0 || self.distance > distance {
@@ -738,17 +749,13 @@ impl Player {
             &self.hitbox.stomach,
             &self.hitbox.hip,
             &self.hitbox.left_shoulder,
-            &self.hitbox.left_elbow,
-            &self.hitbox.left_hand,
+
             &self.hitbox.right_shoulder,
-            &self.hitbox.right_elbow,
-            &self.hitbox.right_hand,
+
             &self.hitbox.left_thigh,
-            &self.hitbox.left_knee,
-            &self.hitbox.left_foot,
+
             &self.hitbox.right_thigh,
-            &self.hitbox.right_knee,
-            &self.hitbox.right_foot,
+
         ];
 
         for bone in bones.iter() {

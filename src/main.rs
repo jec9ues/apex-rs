@@ -191,6 +191,14 @@ impl EguiOverlay for Menu {
                     self.restart_sender.send(true).expect("restart send failed");
                     self.data = Data::default();
                 }
+
+                if ui.button("save config").clicked() {
+                    self.menu_config.save();
+                }
+
+                if ui.button("load config").clicked() {
+                    self.menu_config.load();
+                }
             });
 
             edit_screen_size(&mut self.menu_config.config.screen, ui);

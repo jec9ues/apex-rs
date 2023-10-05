@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::{fs, mem};
 use std::time::Instant;
 use egui_backend::egui::Pos2;
 
@@ -27,6 +28,7 @@ pub struct HitboxConfig {
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct AimConfig {
     pub distance: f32,
+    pub team_check: bool,
     pub aim_assist: AimAssistConfig,
     pub trigger_bot: TriggerBotConfig,
 }
@@ -56,6 +58,7 @@ pub struct EspConfig {
 
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct GlowConfig {
+    pub color: [f32; 3],
     pub player_glow: PlayerGlowConfig,
     pub item_glow: ItemGlowConfig,
 }
@@ -91,5 +94,22 @@ pub struct MenuConfig {
 }
 
 
+impl MenuConfig {
+    pub const PATH: &str = "config.json";
+    pub fn load(&mut self) {
+        let config = fs::read_to_string(MenuConfig::PATH).expect("Unable to read file");
+        let mut res: Config = serde_json::from_str(&config).expect("Unable to parse");
+        println!("load -> {:?}", res);
+        mem::swap(&mut self.config, &mut res);
+    }
+    pub fn save(&self) {
+        let res: String = serde_json::to_string(&self.config).expect("Uable to convert config");
+        println!("write -> {:?}", res);
+        match fs::write(MenuConfig::PATH, res) {
+            Ok(_) => { println!("success write file")}
+            Err(err) => { eprintln!("Error: {:?}", err); }
+        }
+    }
 
+}
 

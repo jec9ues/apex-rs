@@ -34,7 +34,7 @@ fn move_and_press() {
 pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
     const SIZE: usize = (60 << 5);
     // add (1 << 5) skip CWorld
-    let data = read_mem(vp, addr, SIZE);
+    let data = read_mem(vp, addr + (1 << 5), SIZE);
 
     data.chunks_exact(0x20)
         .map(|chunk| u64::from_le_bytes(chunk[..8].try_into().unwrap()))
@@ -45,7 +45,7 @@ pub fn get_player_pointer(vp: VmmProcess, addr: u64) -> Vec<u64> {
 pub fn get_player_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
     const SIZE: usize = (60 << 5);
     // add (1 << 5) skip CWorld
-    let data = read_mem(vp, addr, SIZE);
+    let data = read_mem(vp, addr + (1 << 5), SIZE);
 
     data.chunks_exact(0x20)
         .enumerate()
@@ -122,12 +122,12 @@ pub fn item_glow(vp: VmmProcess, addr: u64) {
     // write_u64(vp, (chunk_u64 + 0x02f0) as u64, 1363184265); // loba-style m_highlightFunctionBits
 }
 /// addr -> base address
-pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u16) {
+pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u64, color: [f32; 3], check_name: bool) {
     let entity_list: u64 = addr + CL_ENTITYLIST;
-    let end = entity_list + (15000 << 5);
-    let area = (15000 << 5);
+    let end = entity_list + (x << 5);
+    let area = (x << 5);
 
-    let data = read_mem(vp, entity_list, area);
+    let data = read_mem(vp, entity_list, area as usize);
     let mut array: Vec<u64> = Vec::new();
     // println!("start -> {:x} end -> {:x}", entity_list, end);
 // 定义块的大小（32个字节）
@@ -144,19 +144,32 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u16) {
         let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().expect("Chunk has unexpected length"));
         if chunk_u64 == 0 { continue; }
         array.push(chunk_u64);
-        let name = get_client_class_name(vp, chunk_u64);
+
         // println!("{name}");
-/*        if name == "CPropSurvival" {// 12 13 22 25 45 47 51 65 129 132 133 145 149 156 170 174 179 191?
+        if check_name {
+            let name = get_client_class_name(vp, chunk_u64);
+            if name != "CPropSurvival" {
+                continue
+            }
+        }
+
+        write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 2);
+        write_u8(vp, chunk_u64 + 0x270, 0);
+        write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
+        write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, 200);
+        // 12 13 22 25 45 47 51 65 129 132 133 145 149 156 170 174 179 191?
             // println!("in");
-            write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 1);
-            write_u8(vp, chunk_u64 + 0x270, 0);
-            write_u8(vp, chunk_u64 + GLOW_ENABLE, 0);
-            write_u8(vp, chunk_u64 + GLOW_ENABLE + 0x4, x);
-        }*/
 
-        let local_ptr = read_u64(vp, addr + LOCAL_PLAYER);
+        let highlightSettingsPtr = read_u64(vp, addr + OFFSET_HIGHLIGHTSETTINGS);
+        // println!("highlightSettingsPtr -> {:x}", highlightSettingsPtr);
+        write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 138, 64, 64].to_vec());
 
-        write_u16(vp, chunk_u64 + TEAM_NUM, read_u16(vp, local_ptr + TEAM_NUM));
+        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8, color[0]);
+        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x4, color[1]);
+        write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x8, color[2]);
+        // let local_ptr = read_u64(vp, addr + LOCAL_PLAYER);
+        //
+        // write_u16(vp, chunk_u64 + TEAM_NUM, read_u16(vp, local_ptr + TEAM_NUM));
         // sleep(Duration::from_secs(1));
 
 
@@ -175,12 +188,7 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u16) {
             write_u32(vp, chunk_u64 + OFFSET_HIGHLIGHTVISIBILITYTYPE, 2); // visibility to always
             write_u8(vp, chunk_u64 + OFFSET_HIGHLIGHTSERVERACTIVESTATES, 200);  // maybe a rarely used settings
 
-            let highlightSettingsPtr = read_u64(vp, addr + OFFSET_HIGHLIGHTSETTINGS);
-            // println!("highlightSettingsPtr -> {:x}", highlightSettingsPtr);
-            write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 138, 70, 64].to_vec());
-            write_f32(vp, highlightSettingsPtr + 40 * 200 + 8, 0.0);
-            write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x4, 0.1);
-            write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x8, 0.1);
+
             // write_u8(vp, chunk_u64 + GLOW_ENABLE, 7);
             // write_u8(vp, chunk_u64 + GLOW_THROUGH_WALL, 2);
             // write_mem(vp, chunk_u64 + GLOW_TYPE, [101, 102, 96, 75].to_vec());

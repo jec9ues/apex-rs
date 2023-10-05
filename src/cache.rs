@@ -98,12 +98,18 @@ impl Data {
         near_player.clone()
     }
 
-    pub fn get_near_crosshair_target(&self, distance: f32) -> Player {
+    pub fn get_near_crosshair_target(&self, distance: f32, team_check: bool) -> Player {
         let mut near_player: &Player = &Default::default();
         let mut last_distance: f32 = 999.0;
         for pointer in &self.cache_pointer.cache_medium {
             if let Some(player) = self.cache_data.players.get(&pointer) {
+
+                if team_check {
+                    if player.status.team == self.cache_data.local_player.status.team { continue }
+                }
+
                 if player.position_2d == Pos2::ZERO || player.distance > distance || player.status.dead > 0 || player.status.knocked > 0 { continue }
+
                 let dis = distance2d(&self.config.screen.center, &player.position_2d);
                 if last_distance > dis{
                     last_distance = dis;
@@ -154,8 +160,11 @@ impl Data {
         // println!("{}", self.cache_pointer.cache_medium.len());
     }
     pub fn update_cache(&mut self, vp: VmmProcess) {
+        // local player + players
         let mut now_pointer = get_player_pointer(vp, self.base + CL_ENTITYLIST);
-        now_pointer.retain(|&x| x == self.cache_data.local_player.pointer);
+        println!("now {:?}", now_pointer);
+        now_pointer.retain(|&x| x != self.cache_data.local_player.pointer);
+        println!("remove now {:?}", now_pointer);
         let mut null_pointer_remove: Vec<u64> = Vec::new();
         if now_pointer.len() != self.cache_pointer.cache_medium.len() {
             let now_list = get_player_pointer_index(vp, self.base + CL_ENTITYLIST);
@@ -230,7 +239,7 @@ impl Data {
         }
     }
     pub fn update_target(&mut self, vp: VmmProcess, distance: f32) {
-        self.cache_data.target =  self.get_near_crosshair_target(distance);
+        self.cache_data.target =  self.get_near_crosshair_target(distance, self.config.aim.team_check);
 
         self.cache_data.target.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
         self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);

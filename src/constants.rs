@@ -1,18 +1,18 @@
 pub mod offsets {
-    pub const CL_ENTITYLIST: u64 = 0x1e223f8;
+    pub const CL_ENTITYLIST: u64 = 0x1e213f8;
     // [Miscellaneous] -> cl_entitylist
-    pub const LOCAL_PLAYER: u64 = 0x21d2738;
+    pub const LOCAL_PLAYER: u64 = 0x21d1738;
     // LocalPlayer
-    pub const NAME_LIST: u64 = 0xc265a60;
+    pub const NAME_LIST: u64 = 0xc264a60;
     // [Miscellaneous] -> NameList
-    pub const VIEW_RENDER: u64 = 0x74200a8;
+    pub const VIEW_RENDER: u64 = 0x741f0a8;
     // ViewRender
     pub const VIEW_MATRIX: u64 = 0x11a350;
     // ViewMatrix
-    pub const INPUT_SYSTEM: u64 = 0x1773c00;
+    pub const INPUT_SYSTEM: u64 = 0x1772c00;
     pub const CAMERA_POSITION: u64 = 0x1e90;
     //[Miscellaneous] -> CPlayer!camera_origin
-    pub const LEVEL_NAME: u64 = 0x16f61c0;
+    pub const LEVEL_NAME: u64 = 0x16f51c0;
     // [Miscellaneous] -> LevelName
     pub const GLOW_COLOR: u64 = 0x200;
     // [Miscellaneous] -> glow_color
@@ -42,7 +42,7 @@ pub mod offsets {
     // [DataMap.C_BaseEntity] m_currentFrame.modelIndex=0x00d8
 
     pub const LAST_VISIBLE_TIME: u64 = 0x19B0;
-    // //CPlayer!LAST_VISIBLE_TIME
+    //CPlayer!LAST_VISIBLE_TIME
     pub const SHIELD: u64 = 0x01a0;
     // [RecvTable.DT_TitanSoul] m_shieldHealth
     pub const MAX_SHIELD: u64 = 0x01a4;
@@ -92,7 +92,7 @@ pub mod offsets {
     // [WeaponSettingsMeta] is_semi_auto / m_isSemiAuto
 
 
-    pub const OFFSET_HIGHLIGHTSETTINGS: u64 = 0xb5f9620;
+    pub const OFFSET_HIGHLIGHTSETTINGS: u64 = 0xB5F7620;
     pub const OFFSET_HIGHLIGHTSERVERACTIVESTATES: u64 = 0x298;
     pub const OFFSET_HIGHLIGHTCURRENTCONTEXTID: u64 = 0x294;
     pub const OFFSET_HIGHLIGHTVISIBILITYTYPE: u64 = 0x278;

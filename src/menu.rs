@@ -136,13 +136,14 @@ pub fn dbg_status(status: &Status, ui: &mut Ui) {
             });
         });
 }
+
 pub fn dbg_player(player: &Player, ui: &mut Ui) {
-    ui.group( |ui| {
-        ui.vertical( |ui| {
+    ui.group(|ui| {
+        ui.vertical(|ui| {
             let mut title = RichText::new("Default");
             if player.status.dead > 0 {
                 title = RichText::new(format!("{} -> {}", player.index, player.status.name)).color(Color32::RED).strikethrough();
-            }  else {
+            } else {
                 title = RichText::new(format!("{} -> {}", player.index, player.status.name)).color(Color32::GREEN);
             }
             CollapsingHeader::new(title)
@@ -158,58 +159,55 @@ pub fn dbg_player(player: &Player, ui: &mut Ui) {
 }
 
 pub fn edit_screen_size(screen_size: &mut ScreenConfig, ui: &mut Ui) {
-    ui.group( |ui| {
-        ui.vertical( |ui| {
+    ui.group(|ui| {
+        ui.vertical(|ui| {
             CollapsingHeader::new(RichText::new("Screen Size"))
-                .default_open(false)
+                .default_open(true)
                 .show(ui, |ui| {
-                    ui.horizontal( |ui| {
+                    ui.horizontal(|ui| {
                         ui.label("screen width -> ");
                         ui.add(DragValue::new(&mut screen_size.size[0]).speed(10.0));
                     });
-                    ui.horizontal( |ui| {
+                    ui.horizontal(|ui| {
                         ui.label("screen height -> ");
                         ui.add(DragValue::new(&mut screen_size.size[1]).speed(10.0));
                     });
-
                 });
         });
     });
 }
 
 pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
-
-    ui.group( |ui| {
+    ui.group(|ui| {
 
         // aim config
-        ui.horizontal( |ui| {
+        ui.horizontal(|ui| {
             // aim assist config
-            ui.vertical( |ui| {
-
+            ui.vertical(|ui| {
                 ui.checkbox(&mut aim_config.aim_assist.enable, "enable aim assist");
 
-                ui.horizontal( |ui| {
+                ui.horizontal(|ui| {
                     ui.label("yaw curve factor -> ");
                     ui.add(
                         Slider::new(&mut aim_config.aim_assist.yaw_curve_factor, 10.0..=300.0).step_by(10.0)
                     );
                 });
 
-                ui.horizontal( |ui| {
+                ui.horizontal(|ui| {
                     ui.label("pitch curve factor -> ");
                     ui.add(
                         Slider::new(&mut aim_config.aim_assist.pitch_curve_factor, 10.0..=300.0).step_by(10.0)
                     );
                 });
 
-                ui.horizontal( |ui| {
+                ui.horizontal(|ui| {
                     ui.label("yaw smooth -> ");
                     ui.add(
                         Slider::new(&mut aim_config.aim_assist.yaw_smooth, 1.0..=100.0).step_by(1.0)
                     );
                 });
 
-                ui.horizontal( |ui| {
+                ui.horizontal(|ui| {
                     ui.label("pitch smooth -> ");
                     ui.add(
                         Slider::new(&mut aim_config.aim_assist.pitch_smooth, 1.0..=100.0).step_by(1.0)
@@ -217,21 +215,19 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                 });
 
                 combobox_key(&mut aim_config.aim_assist.key, ui, "aim assist bind key");
-
             });
 
-            ui.vertical( |ui| {
-
+            ui.vertical(|ui| {
                 ui.checkbox(&mut aim_config.trigger_bot.enable, "enable trigger bot");
 
-                ui.horizontal( |ui| {
+                ui.horizontal(|ui| {
                     ui.label("delay -> ");
                     ui.add(
                         Slider::new(&mut aim_config.trigger_bot.delay, 1..=1000).step_by(1.0)
                     );
                 });
 
-                ui.horizontal( |ui| {
+                ui.horizontal(|ui| {
                     ui.label("hitbox size -> ");
                     ui.add(
                         Slider::new(&mut aim_config.trigger_bot.hitbox_size, 1.0..=50.0).step_by(1.0)
@@ -241,32 +237,54 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                 combobox_key(&mut aim_config.trigger_bot.key, ui, "trigger bot bind key");
             });
 
-            ui.vertical( |ui| {
+            ui.vertical(|ui| {
+                ui.checkbox(&mut aim_config.team_check, "enable team check");
 
-            });
-
-            ui.horizontal( |ui| {
-                ui.label("distance -> ");
-                ui.add(
-                    Slider::new(&mut aim_config.distance, 1.0..=200.0).step_by(1.0)
-                );
+                ui.horizontal(|ui| {
+                    ui.label("distance -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.distance, 1.0..=200.0).step_by(1.0)
+                    );
+                });
             });
         });
     });
 }
 
 pub fn edit_glow_config(glow_config: &mut GlowConfig, ui: &mut Ui) {
-    ui.group( |ui| {
+    ui.group(|ui| {
         // glow config
-        ui.vertical( |ui| {
-            ui.checkbox(&mut glow_config.player_glow.enable, "enable player glow");
-        });
-        ui.vertical( |ui| {
-            ui.horizontal( |ui| {
-                ui.label("delay -> ");
-                ui.add(
-                    Slider::new(&mut glow_config.player_glow.delay, 1..=1000).step_by(1.0)
-                );
+        ui.horizontal(|ui| {
+            // player glow config
+            ui.vertical(|ui| {
+                ui.checkbox(&mut glow_config.player_glow.enable, "enable player glow");
+
+
+                ui.horizontal(|ui| {
+                    ui.label("delay -> ");
+                    ui.add(
+                        Slider::new(&mut glow_config.player_glow.delay, 1..=1000).step_by(1.0)
+                    );
+                });
+            });
+
+            // item glow config
+            ui.vertical(|ui| {
+                ui.checkbox(&mut glow_config.item_glow.enable, "enable item glow");
+
+
+
+                ui.horizontal(|ui| {
+                    ui.label("delay -> ");
+                    ui.add(
+                        Slider::new(&mut glow_config.item_glow.delay, 1..=1000).step_by(1.0)
+                    );
+                });
+            });
+
+            ui.vertical(|ui| {
+
+                ui.color_edit_button_rgb(&mut glow_config.color);
             });
         });
     });
@@ -275,11 +293,11 @@ pub fn edit_glow_config(glow_config: &mut GlowConfig, ui: &mut Ui) {
 pub fn edit_esp_config(esp_config: &mut EspConfig, ui: &mut Ui) {
     ui.group(|ui| {
         // esp config
-        ui.vertical( |ui| {
+        ui.vertical(|ui| {
             ui.checkbox(&mut esp_config.enable, "enable player esp");
         });
-        ui.vertical( |ui| {
-            ui.horizontal( |ui| {
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
                 ui.label("distance -> ");
                 ui.add(
                     Slider::new(&mut esp_config.distance, 1.0..=300.0).step_by(1.0)
@@ -287,8 +305,8 @@ pub fn edit_esp_config(esp_config: &mut EspConfig, ui: &mut Ui) {
             });
         });
 
-        ui.vertical( |ui| {
-            ui.horizontal( |ui| {
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
                 ui.label("delay -> ");
                 ui.add(
                     Slider::new(&mut esp_config.delay, 1..=1000).step_by(1.0)

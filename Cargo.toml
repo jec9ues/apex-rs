@@ -23,5 +23,6 @@ rdev = "*"
 named_constants = "*"
 ini_core = "*"
 serde = "*"
+serde_json = { version = "*", features = [] }
 
 
