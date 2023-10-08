@@ -8,6 +8,7 @@ pub mod cache;
 pub mod aimbot;
 pub mod config;
 pub mod menu;
+pub mod network;
 
 
 use std::fmt::{Debug, Display};
@@ -37,6 +38,7 @@ use rand::Rng;
 use crate::aimbot::main_aimbot;
 use crate::config::{Config, MenuConfig};
 use crate::menu::{edit_aimbot_config, edit_esp_config, edit_glow_config, edit_screen_size};
+use crate::network::verify_key;
 
 
 fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
@@ -74,6 +76,10 @@ fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
 fn main() {
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
+/*    if verify_key().unwrap() != "valid" {
+        std::process::exit(1);
+    }
+*/
 
 
     let (config_sender, config_receiver) = bounded::<Config>(1);

@@ -96,7 +96,7 @@ pub struct MenuConfig {
 
 
 impl MenuConfig {
-    pub const PATH: &str = "config.json";
+    pub const PATH: &'static str = "config.json";
     pub fn load(&mut self) {
         let config = fs::read_to_string(MenuConfig::PATH).expect("Unable to read file");
         let mut res: Config = serde_json::from_str(&config).expect("Unable to parse");

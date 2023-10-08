@@ -101,3 +101,25 @@ pub mod offsets {
     // [DataMap.C_Player] -> m_ammoPoolCapacity - 0x14
     
 }
+
+
+
+pub const SERVER_PUBLIC_PEM: &'static str = "-----BEGIN PUBLIC KEY-----
+MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBAMysAtpmr0mkb3V8rCbysLdGsTqhvDac
++6I8juHMnHR1V4bi6QI9cBhWOYtbnGvjv06Cap8iaSb0YE4PfB7qeFkCAwEAAQ==
+-----END PUBLIC KEY-----";
+
+pub const CLIENT_PRIVATE_PEM: &'static str = "-----BEGIN PRIVATE KEY-----
+MIIBUgIBADANBgkqhkiG9w0BAQEFAASCATwwggE4AgEAAkEAuF1sjDy8cDuLsFYd
+6z/jadOSy1PFrFw/rjJCR34ZEQfY+wyCxoQ6/rAcoIrz7mm/nByLgU4IXTtf1xqp
+FN/CswIDAQABAkBNyUUaKioLZGQ8oyj+b7dAmD7QQOkfHtDTa2shhOeIkkK7eGhm
+/ZrwkUZAF6CoDSKGn9mSuH9o+vU77QHoEoM5AiEA2nCEEI8nm+T7ErZkRdkXNWJH
+OEvfHr3kSykAcdjGrH8CIQDYEPrl24BXKYSvPsNvELkWmg9kFyrYPYE47V7/M/vf
+zQIgUv8vXq9V6GjfcOO2Q8fRhqoZz20ckKysAlbI4XjxO/cCHyKalZQ6k1NiUt2+
+L46aHwp/ofdlvnbjYs67NXup160CIAqs7+qNppTJ7lFIM6vrjzUoXXXhksBGVRkc
+lSPOHXeb
+-----END PRIVATE KEY-----";
+pub const CLIENT_PUBLIC_PEM: &'static str = "-----BEGIN PUBLIC KEY-----
+MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALhdbIw8vHA7i7BWHes/42nTkstTxaxc
+P64yQkd+GREH2PsMgsaEOv6wHKCK8+5pv5wci4FOCF07X9caqRTfwrMCAwEAAQ==
+-----END PUBLIC KEY-----";
