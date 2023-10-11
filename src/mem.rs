@@ -291,7 +291,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     println!("{:?}", path);
     let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
     // let vmm = Vmm::new(path, &vmm_args).unwrap();
-    let vmm = Vmm::new("D:\\MEM\\vmm.dll", &vmm_args).unwrap();
+    let vmm = Vmm::new("D:\\ovo-rs\\vmm.dll", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");
@@ -343,7 +343,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
             Ok(config) => {
                 // println!("in");
                 data.config = config;
-                data.config.screen = ScreenConfig::new([data.config.screen.size.x, data.config.screen.size.y]);
+                // data.config.screen = ScreenConfig::new([data.config.screen.size.x, data.config.screen.size.y]);
                 // println!("config -> {:?}", data.config);
             }
             Err(_) => {}
@@ -416,7 +416,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         // data.re_cache_pointer(vp);
         // println!("{:?}", data.cache_data.target);
         if data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
-            let target_bone = data.cache_data.target.get_nearest_bone(data.config.screen.center);
+            let target_bone = data.cache_data.target.get_nearest_bone(data.config.screen.center());
             let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, target_bone.position);
             let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, target_bone.position);
             // let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
@@ -425,7 +425,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
             // let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
             // let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
 
-            let distance_to_target = data.cache_data.target.position_2d.distance(data.config.screen.center);
+            let distance_to_target = data.cache_data.target.position_2d.distance(data.config.screen.center());
 
             let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
             let angle_delta_smooth = calculate_delta_smooth(distance_to_target, data.config.aim.aim_assist.yaw_smooth, data.config.aim.aim_assist.yaw_curve_factor);
@@ -437,7 +437,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
             let new_pitch = data.cache_data.local_player.pitch + pitch_delta / pitch_delta_smooth;
             // println!("calculate pitch -> {}, yaw -> {}", new_pitch, new_yaw);
             if data.cache_data.target.status.visible() {
-                if data.key.get_key_state(data.config.aim.aim_assist.key) {
+                if data.key.get_key_state(data.config.aim.aim_assist.key) || data.key.get_key_state(data.config.aim.aim_assist.key2) {
                     // data.cache_data.local_player.set_yaw(vp, new_yaw);
                     // data.cache_data.local_player.set_pitch(vp, new_pitch);
                     data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
@@ -448,7 +448,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                         if data.key.get_key_state(data.config.aim.trigger_bot.key) {
                             // data.cache_data.local_player.set_yaw(vp, new_yaw);
                             // data.cache_data.local_player.set_pitch(vp, new_pitch);
-                            if data.cache_data.target.hitbox_check(data.config.screen.center, data.config.aim.trigger_bot.hitbox_size) {
+                            if data.cache_data.target.hitbox_check(data.config.screen.center(), data.config.aim.trigger_bot.hitbox_size) {
                                 sleep(Duration::from_micros(data.config.aim.trigger_bot.delay));
                                 send(&EventType::ButtonPress(Button::Left));
                                 send(&EventType::ButtonRelease(Button::Left));

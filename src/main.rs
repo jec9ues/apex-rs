@@ -78,8 +78,8 @@ fn main() {
 
 /*    if verify_key().unwrap() != "valid" {
         std::process::exit(1);
-    }
-*/
+    }*/
+
 
 
     let (config_sender, config_receiver) = bounded::<Config>(1);
@@ -150,7 +150,7 @@ impl EguiOverlay for Menu {
         // println!("most far distance -> {}", self.data.get_near_pointer());
         // self.data.draw_bones_width(overlay.clone());
         if self.menu_config.config.esp.enable {
-            self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center);
+            self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center());
             if self.data.cache_data.target.status.visible() {
                 self.data.cache_data.target.bone_esp(overlay.clone(), 999.0, Color32::GREEN);
             } else {

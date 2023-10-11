@@ -214,7 +214,9 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                     );
                 });
 
-                combobox_key(&mut aim_config.aim_assist.key, ui, "aim assist bind key");
+                combobox_key(&mut aim_config.aim_assist.key, ui);
+
+                combobox_key(&mut aim_config.aim_assist.key2, ui);
             });
 
             ui.vertical(|ui| {
@@ -234,7 +236,7 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                     );
                 });
 
-                combobox_key(&mut aim_config.trigger_bot.key, ui, "trigger bot bind key");
+                combobox_key(&mut aim_config.trigger_bot.key, ui);
             });
 
             ui.vertical(|ui| {
@@ -323,11 +325,12 @@ pub fn edit_esp_config(esp_config: &mut EspConfig, ui: &mut Ui) {
 }
 
 
-pub fn combobox_key(value: &mut InputSystem, ui: &mut Ui, text: &str) {
-    ComboBox::from_label(text).selected_text(format!("{:?}", value)).show_ui(ui, |ui| {
-        ui.selectable_value(value, InputSystem::MOUSE_LEFT, "left mouse");
-        ui.selectable_value(value, InputSystem::MOUSE_RIGHT, "right mouse");
-        ui.selectable_value(value, InputSystem::MOUSE_5, "front side mouse");
-        ui.selectable_value(value, InputSystem::MOUSE_4, "back side mouse");
+pub fn combobox_key(value: &mut u8, ui: &mut Ui) {
+    ui.horizontal(|ui| {
+        ui.add(
+            DragValue::new(value).clamp_range(0..=255).speed(1.0)
+        );
+        ui.label(format!("{:?}", InputSystem(*value)));
     });
+
 }

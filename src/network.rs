@@ -1,3 +1,4 @@
+
 use rsa::{RsaPrivateKey, RsaPublicKey, pkcs8::DecodePublicKey, Pkcs1v15Encrypt, pkcs8::DecodePrivateKey};
 
 use serde::{Deserialize, Serialize};
@@ -37,7 +38,7 @@ pub async fn verify_key() -> Result<String, Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
 
     // 发送 POST 请求
-    let uri = "http://127.0.0.1:8080/verify";
+    let uri = "https://api.ovo.rs/verify";
     let res = client.post(uri).json(&data).send().await?;
 
     // 检查响应状态码

@@ -39,14 +39,15 @@ pub struct AimAssistConfig {
     pub pitch_curve_factor: f32,
     pub yaw_smooth: f32,
     pub pitch_smooth: f32,
-    pub key: InputSystem,
+    pub key: u8,
+    pub key2: u8,
 }
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct TriggerBotConfig {
     pub enable: bool,
     pub delay: u64,
     pub hitbox_size: f32,
-    pub key: InputSystem,
+    pub key: u8,
 }
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct EspConfig {
@@ -86,6 +87,9 @@ impl ScreenConfig {
             size: Pos2::from(value),
             center: Pos2::from([value[0] / 2.0, value[1] / 2.0]),
         }
+    }
+    pub fn center(&self) -> Pos2 {
+        Pos2::new(self.size.x / 2.0, self.size.y / 2.0)
     }
 }
 

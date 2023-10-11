@@ -1146,6 +1146,9 @@ pub enum InputSystem {
     KEY_XBUTTON_RTRIGGER = 126, // ZAXIS NEGATIVE
 
 }
+
+
+
 #[derive(Debug,Copy, Clone)]
 pub struct KeyData {
     pub data: [i32; 255]
@@ -1164,8 +1167,8 @@ impl KeyData {
             self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
         }
     }
-    pub fn get_key_state(&self, value: InputSystem) -> bool{
-        if self.data[(value.0 + 1) as usize] == 1 {
+    pub fn get_key_state(&self, value: u8) -> bool{
+        if self.data[(InputSystem(value).0 + 1) as usize] == 1 {
             true
         } else {
             false

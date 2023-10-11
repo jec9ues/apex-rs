@@ -110,7 +110,7 @@ impl Data {
 
                 if player.position_2d == Pos2::ZERO || player.distance > distance || player.status.dead > 0 || player.status.knocked > 0 { continue }
 
-                let dis = distance2d(&self.config.screen.center, &player.position_2d);
+                let dis = distance2d(&self.config.screen.center(), &player.position_2d);
                 if last_distance > dis{
                     last_distance = dis;
                     near_player = player;

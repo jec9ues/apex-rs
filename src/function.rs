@@ -162,7 +162,7 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u64, color: [f32; 3], check_
 
         let highlightSettingsPtr = read_u64(vp, addr + OFFSET_HIGHLIGHTSETTINGS);
         // println!("highlightSettingsPtr -> {:x}", highlightSettingsPtr);
-        write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 138, 70, 64].to_vec());
+        write_mem(vp, highlightSettingsPtr + 40 * 200 + 4, [137, 129, 70, 64].to_vec()); //129
 
         write_f32(vp, highlightSettingsPtr + 40 * 200 + 8, color[0] * 3.0);
         write_f32(vp, highlightSettingsPtr + 40 * 200 + 8 + 0x4, color[1] * 3.0);
@@ -328,7 +328,7 @@ impl FpsCounter {
 
 
 pub fn calculate_delta_smooth(distance: f32, smooth: f32, curve_factor: f32) -> f32 {
-    let smooth_factor = 1.0 / distance; // distance 倒数
+    let smooth_factor = 1.0 / distance; // distance reciprocal
     let angle_delta =  smooth / smooth_factor / curve_factor;
     // println!("distance -> {}, smooth_factor -> {} angle_delta -> {}", distance, smooth_factor, angle_delta);
     angle_delta
