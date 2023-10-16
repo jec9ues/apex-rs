@@ -76,10 +76,9 @@ fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
 fn main() {
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
-/*    if verify_key().unwrap() != "valid" {
-        std::process::exit(1);
-    }*/
-
+    /*    if verify_key().unwrap() != "valid" {
+            std::process::exit(1);
+        }*/
 
 
     let (config_sender, config_receiver) = bounded::<Config>(1);
@@ -89,10 +88,8 @@ fn main() {
     let (restart_sender, restart_receiver) = bounded::<bool>(1);
     thread::spawn(move || {
         loop {
-
             main_mem(data_sender.clone(), config_receiver.clone(), restart_receiver.clone());
         }
-
     });
 
 
@@ -102,7 +99,7 @@ fn main() {
         data_recv: data_receiver,
         menu_config: MenuConfig::default(),
         config_sender,
-        restart_sender
+        restart_sender,
     });
 }
 
@@ -115,8 +112,8 @@ pub struct Menu {
 
     pub menu_config: MenuConfig,
     pub config_sender: Sender<Config>,
-    
-    pub restart_sender: Sender<bool>
+
+    pub restart_sender: Sender<bool>,
 }
 
 impl EguiOverlay for Menu {
@@ -128,7 +125,7 @@ impl EguiOverlay for Menu {
     ) {
         static ONCE: Once = Once::new();
 
-        ONCE.call_once( || {
+        ONCE.call_once(|| {
             setup_custom_fonts(egui_context);
             glfw_backend.set_window_position([0., 0.]);
             glfw_backend.set_window_size([2570.0f32, 1440.0f32]);
@@ -169,8 +166,6 @@ impl EguiOverlay for Menu {
         }
 
 
-
-
         egui_backend::egui::Window::new("Debug").vscroll(true).show(egui_context, |ui| {
             ui.set_width(450.0);
 
@@ -186,7 +181,6 @@ impl EguiOverlay for Menu {
 
             self.data.dbg_view(ui);
             ui.label(format!("{:?}", self.data.cache_data.target));
-
         });
 
         egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
@@ -208,27 +202,24 @@ impl EguiOverlay for Menu {
             });
 
             edit_screen_size(&mut self.menu_config.config.screen, ui);
-            ui.vertical( |ui| {
-
+            ui.vertical(|ui| {
                 edit_glow_config(&mut self.menu_config.config.glow, ui);
 
                 edit_esp_config(&mut self.menu_config.config.esp, ui);
 
                 edit_aimbot_config(&mut self.menu_config.config.aim, ui);
                 ui.label(format!("config: {:?}", self.menu_config.config));
-
             });
-
         });
 
         egui_backend::egui::Window::new("Curve Preview").show(egui_context, |ui| {
             CollapsingHeader::new(RichText::new("yaw curve preview"))
                 .default_open(false)
                 .show(ui, |ui| {
-                    ui.vertical( |ui| {
+                    ui.vertical(|ui| {
                         let sin: PlotPoints = (1..1000).step_by(1).map(|i| {
                             let x = calculate_delta_smooth(i as f32, self.menu_config.config.aim.aim_assist.yaw_smooth, self.menu_config.config.aim.aim_assist.yaw_curve_factor) as f64;
-                            [x , x.powi(2)]
+                            [x, x.powi(2)]
                         }).collect();
                         let line = Line::new(sin);
                         Plot::new("yaw curve preview")
@@ -242,10 +233,10 @@ impl EguiOverlay for Menu {
             CollapsingHeader::new(RichText::new("pitch curve preview"))
                 .default_open(false)
                 .show(ui, |ui| {
-                    ui.vertical( |ui| {
+                    ui.vertical(|ui| {
                         let sin: PlotPoints = (1..1000).step_by(1).map(|i| {
                             let x = calculate_delta_smooth(i as f32, self.menu_config.config.aim.aim_assist.pitch_smooth, self.menu_config.config.aim.aim_assist.pitch_curve_factor) as f64;
-                            [x , x.powi(2)]
+                            [x, x.powi(2)]
                         }).collect();
                         let line = Line::new(sin);
                         Plot::new("pitch curve preview")
@@ -254,7 +245,6 @@ impl EguiOverlay for Menu {
                             .show(ui, |plot_ui| plot_ui.line(line));
                     });
                 });
-
         });
         match self.config_sender.try_send(self.menu_config.config) {
             Ok(_) => {}

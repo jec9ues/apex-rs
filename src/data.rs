@@ -66,7 +66,6 @@ pub struct Pos3 {
 }
 
 impl Pos3 {
-
     pub const ZERO: Self = Self { x: 0.0, y: 0.0, z: 0.0 };
     pub fn from_array(value: [f32; 3]) -> Self {
         Self {
@@ -133,7 +132,6 @@ impl Status {
         let name_ptr = read_u64(vp, base + NAME_LIST + (index - 1) * 0x10);
         self.name = read_string(vp, name_ptr);
         // println!("squad id -> {}", self.name)
-
     }
 
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
@@ -354,15 +352,16 @@ impl LocalPlayer {
             y: matrix[self.hitbox.head.index][1][3] + vec_abs_origin[1],
             z: matrix[self.hitbox.head.index][2][3] + vec_abs_origin[2],
         };
-
     }
 }
+
 #[derive(Default, Debug, Copy, Clone)]
 pub enum DataError {
     BoneError,
     #[default]
-    None
+    None,
 }
+
 impl Player {
     pub fn update_pointer(&mut self, vp: VmmProcess) {
         self.bone_pointer = read_u64(vp, self.pointer + BONE);
@@ -406,15 +405,15 @@ impl Player {
                  FontId::default(),
                  Color32::LIGHT_BLUE);
         ptr.line_segment(
-            [Pos2 {x: self.position_2d.x + 20.0 , y: self.position_2d.y + 10.0},
-                    Pos2 {x: self.position_2d.x + 20.0 , y: self.position_2d.y + 10.0 - self.status.health as f32 / 3.0}],
-            Stroke::new( 4.0, Color32::GREEN)
+            [Pos2 { x: self.position_2d.x + 20.0, y: self.position_2d.y + 10.0 },
+                Pos2 { x: self.position_2d.x + 20.0, y: self.position_2d.y + 10.0 - self.status.health as f32 / 3.0 }],
+            Stroke::new(4.0, Color32::GREEN),
         );
 
         ptr.line_segment(
-            [Pos2 {x: self.position_2d.x + 25.0 , y: self.position_2d.y + 10.0},
-                Pos2 {x: self.position_2d.x + 25.0 , y: self.position_2d.y + 10.0 - self.status.shield as f32 / 3.0}],
-            Stroke::new( 4.0, Color32::BLUE)
+            [Pos2 { x: self.position_2d.x + 25.0, y: self.position_2d.y + 10.0 },
+                Pos2 { x: self.position_2d.x + 25.0, y: self.position_2d.y + 10.0 - self.status.shield as f32 / 3.0 }],
+            Stroke::new(4.0, Color32::BLUE),
         );
     }
     pub fn bone_esp(&self, ptr: Painter, distance: f32, color: Color32) {
@@ -432,7 +431,6 @@ impl Player {
             &self.hitbox.lower_chest.position_2d,
             &self.hitbox.stomach.position_2d,
             &self.hitbox.hip.position_2d,
-
         ];
         let bones2 = [
             &self.hitbox.left_hand.position_2d,
@@ -442,7 +440,6 @@ impl Player {
             &self.hitbox.right_shoulder.position_2d,
             &self.hitbox.right_elbow.position_2d,
             &self.hitbox.right_hand.position_2d,
-
         ];
 
         let bones3 = [
@@ -453,7 +450,6 @@ impl Player {
             &self.hitbox.right_thigh.position_2d,
             &self.hitbox.right_knee.position_2d,
             &self.hitbox.right_foot.position_2d,
-
         ];
 
         for bone in bones.iter() {
@@ -476,29 +472,27 @@ impl Player {
         ptr.add(
             Shape::line(leg,
                         Stroke::new(2.0, color)));
-/*        ptr.text(self.hitbox.head.position_2d,
-                 Align2::CENTER_BOTTOM,
-                 self.status.skin.to_string(),
-                 FontId::default(),
-                 Color32::WHITE);
-        ptr.text(self.hitbox.hip.position_2d,
-                 Align2::CENTER_BOTTOM,
-                 format!("{:?}", self.status.character),
-                 FontId::default(),
-                 Color32::LIGHT_RED);*/
-/*        ptr.text(self.hitbox.lower_chest.position_2d,
-                 Align2::CENTER_BOTTOM,
-                 format!("{:?}", self.status.last_visible_time),
-                 FontId::default(),
-                 Color32::BLUE);
+        /*        ptr.text(self.hitbox.head.position_2d,
+                         Align2::CENTER_BOTTOM,
+                         self.status.skin.to_string(),
+                         FontId::default(),
+                         Color32::WHITE);
+                ptr.text(self.hitbox.hip.position_2d,
+                         Align2::CENTER_BOTTOM,
+                         format!("{:?}", self.status.character),
+                         FontId::default(),
+                         Color32::LIGHT_RED);*/
+        /*        ptr.text(self.hitbox.lower_chest.position_2d,
+                         Align2::CENTER_BOTTOM,
+                         format!("{:?}", self.status.last_visible_time),
+                         FontId::default(),
+                         Color32::BLUE);
 
-        ptr.text(self.hitbox.left_elbow.position_2d,
-                 Align2::CENTER_BOTTOM,
-                 format!("{:?}", self.status.last_crosshair_target_time),
-                 FontId::default(),
-                 Color32::RED);*/
-
-
+                ptr.text(self.hitbox.left_elbow.position_2d,
+                         Align2::CENTER_BOTTOM,
+                         format!("{:?}", self.status.last_crosshair_target_time),
+                         FontId::default(),
+                         Color32::RED);*/
     }
     pub fn target_line(&self, ptr: Painter, center: Pos2) {
         if self.position_2d == Pos2::ZERO {
@@ -537,9 +531,9 @@ impl Player {
             .collect();
 
         // println!("{} -> {:?}", self.pointer, bone_index);
-/*        if bone_index.iter().any(|&x| x > 240) {
-            Err(DataError::BoneError)
-        };*/
+        /*        if bone_index.iter().any(|&x| x > 240) {
+                    Err(DataError::BoneError)
+                };*/
 
         if self.status.character == Character::Bloodhound {
             self.hitbox.head.index = bone_index[0] as usize;
@@ -619,7 +613,7 @@ impl Player {
                 matrix
             })
             .collect();
-        if self.hitbox.head.index > 240 {return;}
+        if self.hitbox.head.index > 240 { return; }
         // println!("name -> {}", self.status.name);
         self.hitbox.head.position = Pos3 {
             x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
@@ -736,7 +730,7 @@ impl Player {
         ];
 
         for bone in bones.iter_mut() {
-            bone.position_2d = world_to_screen(matrix, bone.position, Pos2 {x: 2560.0, y: 1440.0});
+            bone.position_2d = world_to_screen(matrix, bone.position, Pos2 { x: 2560.0, y: 1440.0 });
         };
     }
 
@@ -750,8 +744,6 @@ impl Player {
             &self.hitbox.lower_chest,
             &self.hitbox.stomach,
             &self.hitbox.hip,
-
-
         ];
 
         for bone in bones.iter() {
@@ -990,7 +982,6 @@ impl CharacterType {
                 self.table.insert(*value, *character);
             }
         }
-
     }
 
     pub fn check_character_type(&self, value: u16) -> Character {
@@ -1118,17 +1109,20 @@ pub enum InputSystem {
 
     MOUSE_LEFT = 107,
     MOUSE_RIGHT = 108,
-    MOUSE_MIDDLE  = 109,
-    MOUSE_4 = 110, // side down
+    MOUSE_MIDDLE = 109,
+    MOUSE_4 = 110,
+    // side down
     MOUSE_5 = 111, // side up
 
     // XBox 360
-    KEY_XBUTTON_UP = 242, // POV buttons
+    KEY_XBUTTON_UP = 242,
+    // POV buttons
     KEY_XBUTTON_RIGHT = 243,
     KEY_XBUTTON_DOWN = 244,
     KEY_XBUTTON_LEFT = 245,
 
-    KEY_XBUTTON_A = 114, // Buttons
+    KEY_XBUTTON_A = 114,
+    // Buttons
     KEY_XBUTTON_B = 115,
     KEY_XBUTTON_X = 116,
     KEY_XBUTTON_Y = 117,
@@ -1139,35 +1133,36 @@ pub enum InputSystem {
     KEY_XBUTTON_BACK = 120,
     KEY_XBUTTON_START = 121,
 
-    KEY_XBUTTON_STICK1 = 122, // left stick down
+    KEY_XBUTTON_STICK1 = 122,
+    // left stick down
     KEY_XBUTTON_STICK2 = 123, // right stick down
 
-    KEY_XBUTTON_LTRIGGER = 125, // ZAXIS POSITIVE
+    KEY_XBUTTON_LTRIGGER = 125,
+    // ZAXIS POSITIVE
     KEY_XBUTTON_RTRIGGER = 126, // ZAXIS NEGATIVE
-
 }
 
 
-
-#[derive(Debug,Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct KeyData {
-    pub data: [i32; 255]
+    pub data: [i32; 255],
 }
+
 impl Default for KeyData {
     fn default() -> Self {
         KeyData { data: [0; 255] }
     }
 }
-impl KeyData {
 
-    pub fn update_key_state(&mut self, vp: VmmProcess, base: u64){
+impl KeyData {
+    pub fn update_key_state(&mut self, vp: VmmProcess, base: u64) {
         let data = ContinuingData::new(
             read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
         for i in 0..255 {
             self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
         }
     }
-    pub fn get_key_state(&self, value: u8) -> bool{
+    pub fn get_key_state(&self, value: u8) -> bool {
         if self.data[(InputSystem(value).0 + 1) as usize] == 1 {
             true
         } else {
