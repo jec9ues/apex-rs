@@ -18,6 +18,7 @@ use crate::math::*;
 use rdev::*;
 use rdev::EventType::KeyPress;
 use crate::config::{Config, ScreenConfig};
+use crate::kmbox_bpro::main_kmbox_bpro;
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
     match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
@@ -433,7 +434,14 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                 if data.key.get_key_state(data.config.aim.aim_assist.key) || data.key.get_key_state(data.config.aim.aim_assist.key2) {
                     // data.cache_data.local_player.set_yaw(vp, new_yaw);
                     // data.cache_data.local_player.set_pitch(vp, new_pitch);
-                    data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
+                    if data.config.aim.aim_assist.kmbox {
+                        let rt = tokio::runtime::Runtime::new().unwrap();
+                        // 在 Tokio 运行时中执行异步函数
+                        rt.block_on(main_kmbox_bpro(pitch_delta / pitch_delta_smooth, angle_delta / angle_delta_smooth, data.config.aim.aim_assist.pitch_rate, data.config.aim.aim_assist.yaw_rate)).expect("TODO: panic message");
+
+                    } else {
+                        data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
+                    }
 
                 }
                 if data.config.aim.trigger_bot.enable {

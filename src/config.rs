@@ -34,11 +34,14 @@ pub struct AimConfig {
 }
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct AimAssistConfig {
+    pub(crate) kmbox: bool,
     pub enable: bool,
     pub yaw_curve_factor: f32,
     pub pitch_curve_factor: f32,
     pub yaw_smooth: f32,
     pub pitch_smooth: f32,
+    pub yaw_rate: f32,
+    pub pitch_rate: f32,
     pub key: u8,
     pub key2: u8,
 }

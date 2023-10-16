@@ -9,6 +9,7 @@ pub mod aimbot;
 pub mod config;
 pub mod menu;
 pub mod network;
+pub mod kmbox_bpro;
 
 
 use std::fmt::{Debug, Display};

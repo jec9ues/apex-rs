@@ -1,0 +1,31 @@
+[package]
+name = "serial2-tokio"
+version = "0.1.4"
+description = "cross platform serial ports for tokio based on the serial2 crate"
+repository = "https://github.com/de-vri-es/serial2-tokio-rs"
+documentation = "https://docs.rs/serial2-tokio"
+keywords = ["serial", "serial-port", "COM-port", "RS232", "tty"]
+categories = ["hardware-support", "network-programming", "os", "science::robotics", "asynchronous"]
+license = "BSD-2-Clause OR Apache-2.0"
+
+publish = ["crates-io"]
+edition = "2021"
+
+[features]
+doc = ["tokio/io-util"]
+
+[dependencies]
+serial2 = "0.2.6"
+tokio = { version = "1.32.0", default-features = false, features = ["full"] }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.148"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3.9", features = ["winerror"] }
+
+[dev-dependencies]
+tokio = { version = "1.32.0", features = ["full"] }
+
+[package.metadata.docs.rs]
+features = ["doc"]

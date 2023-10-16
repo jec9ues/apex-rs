@@ -214,6 +214,22 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                     );
                 });
 
+                ui.checkbox(&mut aim_config.aim_assist.kmbox, "enable kmbox bpro");
+
+                ui.horizontal(|ui| {
+                    ui.label("yaw rate (for kmbox) -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.aim_assist.yaw_rate, 1.0..=100.0).step_by(1.0)
+                    );
+                });
+
+                ui.horizontal(|ui| {
+                    ui.label("pitch rate (for kmbox) -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.aim_assist.pitch_rate, 1.0..=100.0).step_by(1.0)
+                    );
+                });
+
                 combobox_key(&mut aim_config.aim_assist.key, ui);
 
                 combobox_key(&mut aim_config.aim_assist.key2, ui);
@@ -275,7 +291,6 @@ pub fn edit_glow_config(glow_config: &mut GlowConfig, ui: &mut Ui) {
                 ui.checkbox(&mut glow_config.item_glow.enable, "enable item glow");
 
 
-
                 ui.horizontal(|ui| {
                     ui.label("delay -> ");
                     ui.add(
@@ -332,5 +347,4 @@ pub fn combobox_key(value: &mut u8, ui: &mut Ui) {
         );
         ui.label(format!("{:?}", InputSystem(*value)));
     });
-
 }
