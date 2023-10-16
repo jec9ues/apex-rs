@@ -31,8 +31,6 @@ pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
     }
 }
 
-
-
 pub fn read_u8(vp: VmmProcess, addr: u64) -> u8 {
     const SIZE: usize = size_of::<u8>();
 
@@ -61,7 +59,6 @@ pub fn read_u32(vp: VmmProcess, addr: u64) -> u32 {
     // println!("data: {:?} res: {}", data_read, res);
     res
 }
-
 pub fn read_i32(vp: VmmProcess, addr: u64) -> i32 {
     const SIZE: usize = size_of::<i32>();
 
@@ -93,9 +90,6 @@ pub fn read_f32(vp: VmmProcess, addr: u64) -> f32 {
 
     res
 }
-
-
-
 pub fn read_f32_vec(vp: VmmProcess, addr: u64, amount: usize) -> Vec<f32> {
     const SIZE: usize = size_of::<f32>();
 
@@ -112,7 +106,6 @@ pub fn read_f32_vec(vp: VmmProcess, addr: u64, amount: usize) -> Vec<f32> {
 
     f32_values
 }
-
 pub fn read_string(vp: VmmProcess, addr: u64) -> String {
     const SIZE: usize = 32; // 假设最大字符串长度为 32，可以根据实际情况调整
 
@@ -141,6 +134,7 @@ pub fn write_mem(vp: VmmProcess, addr:u64, data: Vec<u8>) {
         Ok(_) => {  }
     }
 }
+
 pub fn write_u8(vp: VmmProcess, addr:u64, value: u8) {
     write_mem(vp, addr, value.to_le_bytes().to_vec())
 }
@@ -159,7 +153,6 @@ pub fn write_u64(vp: VmmProcess, addr:u64, value: u64) {
 pub fn write_f32(vp: VmmProcess, addr:u64, value: f32) {
     write_mem(vp, addr, value.to_le_bytes().to_vec())
 }
-
 pub fn write_f32_vec(vp: VmmProcess, addr:u64, value: Vec<f32>) {
     write_mem(vp, addr, value
         .iter()

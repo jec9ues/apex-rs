@@ -1,7 +1,7 @@
 pub mod offsets {
-    pub const CL_ENTITYLIST: u64 = 0x1e213f8;
+    pub const CL_ENTITYLIST: u64 = 0x1e21418;
     // [Miscellaneous] -> cl_entitylist
-    pub const LOCAL_PLAYER: u64 = 0x21d1738;
+    pub const LOCAL_PLAYER: u64 = 0x21d1758;
     // LocalPlayer
     pub const NAME_LIST: u64 = 0xc264a60;
     // [Miscellaneous] -> NameList
@@ -9,10 +9,10 @@ pub mod offsets {
     // ViewRender
     pub const VIEW_MATRIX: u64 = 0x11a350;
     // ViewMatrix
-    pub const INPUT_SYSTEM: u64 = 0x1772c00;
+    pub const INPUT_SYSTEM: u64 = 0x1772cc0;
     pub const CAMERA_POSITION: u64 = 0x1e90;
     //[Miscellaneous] -> CPlayer!camera_origin
-    pub const LEVEL_NAME: u64 = 0x16f51c0;
+    pub const LEVEL_NAME: u64 = 0x16f51e0;
     // [Miscellaneous] -> LevelName
     pub const GLOW_COLOR: u64 = 0x200;
     // [Miscellaneous] -> glow_color
