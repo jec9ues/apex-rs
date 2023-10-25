@@ -326,9 +326,13 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
     // data.config.load();
     loop {
+
+        println!("{}", read_string(vp, base + LEVEL_NAME));
         if delay == u16::MAX {
             delay = u16::MIN;
             if read_string(vp, base + LEVEL_NAME) == "mp_lobby" {
+
+                // mp_rr_olympus_mu1_night
                 println!("in lobby, take a short break");
                 break
             }
@@ -365,7 +369,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         data.update_cache(vp);
         if data.config.esp.enable || data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
             data.update_basic(vp, data.config.esp.distance); // ~ 5ms per player
-            data.update_target(vp, data.config.aim.distance);
+            data.update_target(vp, data.config.aim.distance, data.config.screen.size);
 
             if delay & data.config.esp.delay == 0 {
                 data.update_basic(vp, f32::MAX); // ~ 5ms per player

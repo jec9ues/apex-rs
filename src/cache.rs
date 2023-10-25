@@ -238,11 +238,11 @@ impl Data {
             }
         }
     }
-    pub fn update_target(&mut self, vp: VmmProcess, distance: f32) {
+    pub fn update_target(&mut self, vp: VmmProcess, distance: f32, screen_size: Pos2) {
         self.cache_data.target =  self.get_near_crosshair_target(distance, self.config.aim.team_check);
 
         self.cache_data.target.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
-        self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
+        self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix, screen_size);
     }
 /*    pub fn update_cache_high(&mut self, vp: VmmProcess) {
 

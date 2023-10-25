@@ -11,6 +11,7 @@ use crate::math::*;
 use crate::mem::*;
 use named_constants::named_constants;
 use serde::{Deserialize, Serialize};
+use crate::convert_coordinates;
 
 #[derive(Debug, Clone, Default)]
 pub struct Player {
@@ -416,6 +417,16 @@ impl Player {
             Stroke::new(4.0, Color32::BLUE),
         );
     }
+    pub fn map_esp(&self, ptr: Painter, pos0: Pos2, rate: [f32; 2]) {
+        let player_pos = convert_coordinates(
+            self.position.x,
+            self.position.y,
+            rate[0],
+            rate[1],
+        );
+        ptr.circle(Pos2 { x: pos0.x + player_pos.0, y: pos0.y + player_pos.1 },
+                   2.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
+    }
     pub fn bone_esp(&self, ptr: Painter, distance: f32, color: Color32) {
         if self.status.dead > 0 || self.distance > distance {
             return;
@@ -707,7 +718,7 @@ impl Player {
         };
     }
 
-    pub fn update_bone_position_2d(&mut self, matrix: [[f32; 4]; 4]) {
+    pub fn update_bone_position_2d(&mut self, matrix: [[f32; 4]; 4], screen_size: Pos2) {
         let mut bones = [
             &mut self.hitbox.head,
             &mut self.hitbox.neck,
@@ -730,7 +741,7 @@ impl Player {
         ];
 
         for bone in bones.iter_mut() {
-            bone.position_2d = world_to_screen(matrix, bone.position, Pos2 { x: 2560.0, y: 1440.0 });
+            bone.position_2d = world_to_screen(matrix, bone.position, screen_size);
         };
     }
 

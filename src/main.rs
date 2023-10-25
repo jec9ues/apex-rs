@@ -20,11 +20,12 @@ use egui_overlay::EguiOverlay;
 
 
 use egui_render_three_d::ThreeDBackend as DefaultGfxBackend;
-use std::thread;
+use std::{env, thread};
+use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
-use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape, Stroke, Key, CollapsingHeader, RichText};
+use egui_backend::egui::{Color32, Id, LayerId, Order, Painter, Pos2, Rect, Shape, Stroke, Key, CollapsingHeader, RichText, ColorImage, TextureHandle, Vec2};
 
 use egui_backend::egui::plot::{Line, Plot, PlotPoints};
 
@@ -38,8 +39,9 @@ use crate::mem::*;
 use rand::Rng;
 use crate::aimbot::main_aimbot;
 use crate::config::{Config, MenuConfig};
-use crate::menu::{edit_aimbot_config, edit_esp_config, edit_glow_config, edit_screen_size};
+use crate::menu::{edit_aimbot_config, edit_esp_config, edit_glow_config, edit_screen_size, edit_world_config};
 use crate::network::verify_key;
+
 
 
 fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
@@ -77,9 +79,9 @@ fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
 fn main() {
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
-    /*    if verify_key().unwrap() != "valid" {
-            std::process::exit(1);
-        }*/
+        // if verify_key().unwrap() != "valid" {
+        //     std::process::exit(1);
+        // }
 
 
     let (config_sender, config_receiver) = bounded::<Config>(1);
@@ -98,6 +100,7 @@ fn main() {
         fps: FpsCounter::new(),
         data: Data::default(),
         data_recv: data_receiver,
+        texture: None,
         menu_config: MenuConfig::default(),
         config_sender,
         restart_sender,
@@ -110,11 +113,12 @@ pub struct Menu {
 
     pub data: Data,
     pub data_recv: Receiver<Data>,
-
+    pub texture: Option<TextureHandle>,
     pub menu_config: MenuConfig,
     pub config_sender: Sender<Config>,
 
     pub restart_sender: Sender<bool>,
+
 }
 
 impl EguiOverlay for Menu {
@@ -181,14 +185,17 @@ impl EguiOverlay for Menu {
             ));
 
             self.data.dbg_view(ui);
-            ui.label(format!("{:?}", self.data.cache_data.target));
+            ui.label(format!("{:?}", self.data.cache_data.local_player.position));
+            if ui.button("📋").clicked() {
+                ui.output_mut(|o| o.copied_text = format!("{:?}", self.data.cache_data.local_player.position));
+            }
         });
 
         egui_backend::egui::Window::new("Menu").show(egui_context, |ui| {
             // ui.set_width(300.0);
 
             ui.horizontal(|ui| {
-                if ui.button("restart dma connect").clicked() {
+                if ui.button("restart DMA connect").clicked() {
                     self.restart_sender.send(true).expect("restart send failed");
                     self.data = Data::default();
                 }
@@ -209,6 +216,7 @@ impl EguiOverlay for Menu {
                 edit_esp_config(&mut self.menu_config.config.esp, ui);
 
                 edit_aimbot_config(&mut self.menu_config.config.aim, ui);
+                edit_world_config(&mut self.menu_config.config.world, ui);
                 ui.label(format!("config: {:?}", self.menu_config.config));
             });
         });
@@ -247,6 +255,41 @@ impl EguiOverlay for Menu {
                     });
                 });
         });
+
+/*        egui_backend::egui::Window::new("Map").title_bar(false).show(egui_context, |ui| {
+            let texture: &TextureHandle = self.texture.get_or_insert_with(|| {
+                // Load the texture only once.
+                let path: PathBuf = env::current_dir().unwrap();
+                ui.ctx().load_texture(
+                    "Olympus_MU2_REV1.webp",
+                    load_image_from_path(&path.join("Olympus_MU1.webp")).unwrap(),
+                    Default::default()
+                )
+            });
+            // ui.image(texture, Vec2::new(1024.0, 1024.0));
+            let map_ptr = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("map_ptr")), Rect::EVERYTHING);
+            let player_pos = convert_coordinates(
+                self.data.cache_data.local_player.position.x,
+                self.data.cache_data.local_player.position.y,
+                self.data.config.world.world_min_x,
+                self.data.config.world.world_min_y,
+            );
+            for player in &self.data.cache_data.players {
+                // player.1.box_esp(overlay.clone());
+                player.1.map_esp(overlay.clone(), ui.min_rect().min, [self.menu_config.config.world.world_min_x, self.menu_config.config.world.world_min_y]);
+
+            }
+            //Pos3 { x: -830.64374, y: 14927.562, z: -5838.49 }
+            //Pos3 { x: -830.6441, y: 14927.562, z: -5838.49 }
+
+            // Right Bottom Pos3 { x: 21686.338, y: -26536.438, z: 3607.3196 } king
+            // left top Pos3 { x: -29279.21, y: 25624.809, z: 3310.6152 } king
+            // left top Pos3 { x: -30171.703, y: 32398.465, z: -3045.3596 } edge
+            // right bottom Pos3 { x: 22957.547, y: -43407.934, z: -1930.706 } edge
+            map_ptr.circle(Pos2 { x: ui.min_rect().min.x + player_pos.0, y: ui.min_rect().min.y + player_pos.1},
+                           1.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
+            map_ptr.circle(ui.min_rect().min, 1.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
+        });*/
         match self.config_sender.try_send(self.menu_config.config) {
             Ok(_) => {}
             Err(_) => {}
@@ -262,7 +305,31 @@ impl EguiOverlay for Menu {
     }
 }
 
+pub fn load_image_from_path(path: &std::path::Path) -> Result<ColorImage, image::ImageError> {
+    let image = image::io::Reader::open(path)?.decode()?;
+    let size = [image.width() as _, image.height() as _];
+    let image_buffer = image.to_rgba8();
+    let pixels = image_buffer.as_flat_samples();
+    Ok(ColorImage::from_rgba_unmultiplied(
+        size,
+        pixels.as_slice(),
+    ))
+}
+// Pos3 { x: -23447.604, y: 37496.742, z: -6781.5986 }
+// Pos3 { x: -17642.447, y: 39367.54, z: -6782.021 }
+pub fn convert_coordinates( player_x: f32, player_y: f32, map_width: f32, map_height: f32) -> (f32, f32) {
+    // 定义地图坐标范围
+    let map_left_top = Pos2 { x: -52024.0, y: 48025.0 };
+    let map_right_bottom = Pos2 { x: 22957.547, y: -43407.934 };
 
+    // 计算地图的宽度和高度
+    // let map_width = map_right_bottom.x - map_left_top.x;
+    // let map_height = map_left_top.y - map_right_bottom.y;
 
+    // 计算地图坐标
+    let map_x = ((player_x - map_left_top.x) / map_width) * 1024.0;
+    let map_y = 1024.0 - ((player_y - map_right_bottom.y) / map_height) * 1024.0;
 
+    (map_x, map_y)
+}
 

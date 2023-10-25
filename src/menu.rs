@@ -1,7 +1,7 @@
 use egui_backend::egui;
 use egui_backend::egui::{CollapsingHeader, Color32, ComboBox, DragValue, Id, RichText, Slider, Ui, Widget, WidgetText};
 use egui_backend::egui::plot::{Line, Plot, PlotPoints};
-use crate::config::{AimConfig, EspConfig, GlowConfig, ScreenConfig};
+use crate::config::{AimConfig, EspConfig, GlowConfig, ScreenConfig, WorldConfig};
 
 
 use crate::data::*;
@@ -336,6 +336,29 @@ pub fn edit_esp_config(esp_config: &mut EspConfig, ui: &mut Ui) {
                 );
             });
         });
+    });
+}
+
+pub fn edit_world_config(world_config: &mut WorldConfig, ui: &mut Ui) {
+    ui.group(|ui| {
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                ui.label("min_x -> ");
+                ui.add(
+                    Slider::new(&mut world_config.world_min_x, 80000.0..=100000.0).step_by(0.1)
+                );
+            });
+        });
+
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                ui.label("min_y -> ");
+                ui.add(
+                    Slider::new(&mut world_config.world_min_y, 90000.0..=100000.0).step_by(0.1)
+                );
+            });
+        });
+
     });
 }
 

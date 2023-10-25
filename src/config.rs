@@ -16,6 +16,16 @@ pub struct Config {
     pub aim: AimConfig,
     pub glow: GlowConfig,
     pub esp: EspConfig,
+    pub world: WorldConfig
+}
+
+#[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
+pub struct WorldConfig {
+    pub world_min_x: f32,
+    pub world_min_y: f32,
+    pub world_max_x: f32,
+    pub world_max_y: f32,
+
 }
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct CharacterConfig {
