@@ -16,7 +16,7 @@ use pretty_hex::*;
 
 use mouse_rs::{types::keys::Keys, Mouse};
 use rdev::{EventType, simulate};
-use crate::data::{Bone, Player, Pos3};
+use crate::data::{Bone, GRENADE_PITCHES, launch2view, LocalPlayer, Pitch, Player, Pos3, WeaponX};
 use crate::egui_overlay::egui::Pos2;
 
 
@@ -57,6 +57,36 @@ pub fn get_player_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
             else if chunk_u64 != 0 {
                 // println!("Index: {}, Value: {}", index, chunk_u64);
                 Some([index as u64, chunk_u64])
+            } else {
+                // println!("Index: {}, Value: {}", index, chunk_u64);
+                None
+            }
+        })
+        .collect()
+}
+
+pub fn get_dummie_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
+    const SIZE: usize = (15000 << 5);
+    // add (1 << 5) skip CWorld
+    let data = read_mem(vp, addr, SIZE);
+
+    data.chunks_exact(0x20)
+        .enumerate()
+        .filter_map(|(index, chunk)| {
+            let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().unwrap());
+            if index == 0 {
+                None
+            }
+            else if chunk_u64 != 0 {
+                // println!("Index: {}, Value: {}", index, chunk_u64);
+                let name = get_client_class_name(vp, chunk_u64);
+                // println!("{}", name);
+                if name != "CAI_BaseNPC" {
+                    None
+                } else {
+                    Some([index as u64, chunk_u64])
+                }
+
             } else {
                 // println!("Index: {}, Value: {}", index, chunk_u64);
                 None
@@ -259,7 +289,6 @@ pub fn item_loba_glow(vp: VmmProcess, base: u64) {
 pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) -> u8 {
     let mut weapon_handle = read_u64(vp, addr + WEAPON);
     weapon_handle &= 0xffff;
-
     let weapon_entity = read_u64(vp, base + CL_ENTITYLIST + (weapon_handle << 5));
     let index = read_u16(vp, weapon_entity + WEAPON_NAME);
     let projectile_speed = read_f32(vp, weapon_entity + BULLET_SPEED);
@@ -332,4 +361,47 @@ pub fn calculate_delta_smooth(distance: f32, smooth: f32, curve_factor: f32) -> 
     let angle_delta =  smooth / smooth_factor / curve_factor;
     // println!("distance -> {}, smooth_factor -> {} angle_delta -> {}", distance, smooth_factor, angle_delta);
     angle_delta
+}
+
+
+pub fn skynade_angle(weapon: WeaponX, local: &LocalPlayer, target: &Pos3) -> (f32, f32) {
+
+    let (lob, pitches, z_offset): (bool, &[Pitch], f32) =(true, &GRENADE_PITCHES, 70.0);
+
+    let g = 750.0 * 1.0;
+    let v0 = 10000.0;
+
+    let delta = target.sub(&local.position);
+    let delta = delta.add(&delta.muls(20.0 / delta.len()));
+    let dx = f32::sqrt(delta.x * delta.x + delta.y * delta.y);
+    let dy = delta.y + z_offset;
+
+    let calc_angle = if lob { lob_angle } else { optimal_angle };
+    if let Some(launch_pitch) = calc_angle(dx, dy, v0, g) {
+        let view_pitch = launch2view(pitches, launch_pitch);
+        return (view_pitch, target.sub(&local.position).qangle().y.to_radians());
+        // return (view_pitch, sdk::qangle(sdk::sub(*target, local.view_origin))[1].to_radians());
+    }
+    else {
+        return Default::default();
+    }
+
+    fn optimal_angle(x: f32, y: f32, v0: f32, g: f32) -> Option<f32> {
+        let root = v0 * v0 * v0 * v0 - g * (g * x * x + 2.0 * y * v0 * v0);
+        if root < 0.0 {
+            return None;
+        }
+        let root = f32::sqrt(root);
+        let slope = (v0 * v0 - root) / (g * x);
+        Some(f32::atan(slope))
+    }
+    fn lob_angle(x: f32, y: f32, v0: f32, g: f32) -> Option<f32> {
+        let root = v0 * v0 * v0 * v0 - g * (g * x * x + 2.0 * y * v0 * v0);
+        if root < 0.0 {
+            return None;
+        }
+        let root = f32::sqrt(root);
+        let slope = (v0 * v0 + root) / (g * x);
+        Some(f32::atan(slope))
+    }
 }

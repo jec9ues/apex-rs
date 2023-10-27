@@ -35,7 +35,7 @@ pub struct CacheData {
     pub players: HashMap<u64, Player>,
 }
 impl CacheData {
-    pub fn get_players_bones_position(&mut self, vp: VmmProcess) -> Vec<Pos3> {
+/*    pub fn get_players_bones_position(&mut self, vp: VmmProcess) -> Vec<Pos3> {
         let mut res: Vec<Pos3> = Vec::new();
         for (pointer, mut data) in &mut self.players {
             // data.update_bone_position(vp);
@@ -45,7 +45,7 @@ impl CacheData {
             res.extend(data.get_bones_position());
         };
         res
-    }
+    }*/
 }
 
 #[derive(Debug, Clone, Default)]
@@ -53,6 +53,7 @@ pub struct Data {
     pub base: u64,
     pub cache_pointer: CachePtr,
     pub cache_data: CacheData,
+    pub grenade: [f32; 2],
     pub key: KeyData,
     pub config: Config,
     // pub table: DataTable,
@@ -147,7 +148,7 @@ impl Data {
             player.update_bone_index(vp);
 
             player.update_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
-            player.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
+            // player.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
             player.update_distance(vp, &self.cache_data.local_player.position);
             // println!("distance -> {:?}", player.distance);
             // println!("pos -> {:?} pos -> {:?}", &player.position, &self.cache_data.local_player.position);
@@ -214,8 +215,8 @@ impl Data {
 
     }
     pub fn update_basic(&mut self, vp: VmmProcess, distance: f32) {
-        // self.cache_data.local_player.update_position(vp);
-        self.cache_data.local_player.update_bone_position(vp);
+        self.cache_data.local_player.update_position(vp);
+        // self.cache_data.local_player.update_bone_position(vp);
         self.cache_data.local_player.update_view_matrix(vp); // 500 µs
         self.cache_data.local_player.update_angle(vp); // 500 µs
         self.key.update_key_state(vp, self.base);

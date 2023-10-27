@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use egui_backend::egui::Pos2;
 use memprocfs::*;
+use pretty_hex::PrettyHex;
 use crate::cache::*;
 use crate::constants::offsets::*;
 use crate::data::*;
@@ -367,6 +368,28 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                 };*/
         data.update_status(vp);
         data.update_cache(vp);
+        // let raw = read_mem(vp, data.base + NST_WEAPON_NAMES, 0x10);
+        // println!("raw -> {:?}", raw.hex_dump());
+        // let mut wp = WeaponX::default();
+        // wp.update(vp, data.cache_data.local_player.pointer, data.base);
+
+        // for (_, player) in &data.cache_data.players {
+        //
+        //     let cacu = skynade_angle(wp, &data.cache_data.local_player, &player.position);
+        //     let cacu = skynade_angle(wp, &data.cache_data.local_player, &player.position);
+        //     println!("pos -> {:?}", player.position);
+        //     println!("skynade -> {:?}", (cacu.0.to_degrees(), cacu.1.to_degrees()));
+        //     data.grenade = [cacu.0.to_degrees(), cacu.1.to_degrees()];
+        //     data.cache_data.local_player.set_angle(vp, -cacu.0.to_degrees(), cacu.1.to_degrees());
+        // }
+
+        println!("distance_2d -> {:?}", data.cache_data.target.distance_2d);
+        println!("distance -> {:?}", data.cache_data.target.distance);
+        // println!("position -> {:?}", data.cache_data.target.position);
+        // println!("my position -> {:?}", data.cache_data.local_player.position);
+        // println!("my pitch -> {:?}", data.cache_data.local_player.pitch);
+        // data.cache_data.local_player.set_pitch(vp, data.config.aim.pitch);
+
         if data.config.esp.enable || data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
             data.update_basic(vp, data.config.esp.distance); // ~ 5ms per player
             data.update_target(vp, data.config.aim.distance, data.config.screen.size);
@@ -415,8 +438,8 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         // println!("{:?}", data.cache_data.target);
         if data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
             let target_bone = data.cache_data.target.get_nearest_bone(data.config.screen.center());
-            let pitch = calculate_desired_pitch(data.cache_data.local_player.hitbox.head.position, target_bone.position);
-            let yaw = calculate_desired_yaw(data.cache_data.local_player.hitbox.head.position, target_bone.position);
+            let pitch = calculate_desired_pitch(data.cache_data.local_player.camera_position, target_bone.position);
+            let yaw = calculate_desired_yaw(data.cache_data.local_player.camera_position, target_bone.position);
             // let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
             // let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
 
@@ -478,11 +501,12 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
-        println!("Loop time -> {:?}", elapsed_time);
+        // println!("Loop time -> {:?}", elapsed_time);
 
         data_sender.send(data.clone()).expect("data send failed");
 
-        sleep(Duration::from_micros(10));
+        sleep(Duration::from_micros(100));
+        // sleep(Duration::from_millis(1000));
         delay += 1
     }
 }

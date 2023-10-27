@@ -12,6 +12,8 @@ pub mod offsets {
     pub const INPUT_SYSTEM: u64 = 0x1772cc0;
     pub const CAMERA_POSITION: u64 = 0x1e90;
     //[Miscellaneous] -> CPlayer!camera_origin
+    pub const CAMERA_ANGLES: u64 = 0x1e9c;
+    //[Miscellaneous] -> CPlayer!CAMERA_ANGLES=0x1e9c
     pub const LEVEL_NAME: u64 = 0x16f51e0;
     // [Miscellaneous] -> LevelName
     pub const GLOW_COLOR: u64 = 0x200;
@@ -74,6 +76,8 @@ pub mod offsets {
     // m_latestPrimaryWeapons
     pub const SELECTED_SLOT: u64 = 0x1964;
     // m_latestNonOffhandWeapons
+    pub const NST_WEAPON_NAMES: u64 = 0x07420760;
+    // WeaponNames=0x07420760
     pub const WEAPON_NAME: u64 = 0x1584;
     // [RecvTable.DT_WeaponX] -> m_weaponNameIndex
     pub const PLAYER_DATA: u64 = 0x15f0;
@@ -90,7 +94,14 @@ pub mod offsets {
     // m_playerData + m_curZoomFOV
     pub const SEMI_AUTO: u64 = WEAPON_SETTING_BASE + 0x018c;
     // [WeaponSettingsMeta] is_semi_auto / m_isSemiAuto
-
+    pub const BITFIELD_FROM_PLAYER: u64 = 0x1724;
+    // m_modBitfieldFromPlayer=0x1724
+    pub const BITFIELD_INTERNAL: u64 = 0x1728;
+    // m_modBitfieldInternal=0x1728
+    pub const BITFIELD_CURRENT: u64 = 0x172c;
+    // m_modBitfieldCurrent=0x172c
+    pub const BITFIELD_DISABLED: u64 = 0x1730;
+    // m_modBitfieldDisabled=0x1730
 
     pub const OFFSET_HIGHLIGHTSETTINGS: u64 = 0xB5F7620;
     pub const OFFSET_HIGHLIGHTSERVERACTIVESTATES: u64 = 0x298;

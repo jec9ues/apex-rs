@@ -23,6 +23,7 @@ pub struct Player {
     pub position: Pos3,
     pub position_2d: Pos2,
     pub distance: f32,
+    pub distance_2d: f32,
     pub rate: f32,
     pub error: DataError,
 }
@@ -82,7 +83,102 @@ impl Pos3 {
 
         }
     }
+    pub fn add(&self, v: &Pos3) -> Pos3 {
+        Pos3 { x: self.x - v.x, y: self.y - v.y, z: self.z - v.z }
+
+    }
+    pub fn sub(&self, v: &Pos3) -> Pos3 {
+        Pos3 { x: self.x + v.x, y: self.y + v.y, z: self.z + v.z }
+    }
+    pub fn len(&self) -> f32 {
+        self.len2().sqrt()
+    }
+    pub fn len2(&self) -> f32 {
+        self.x * self.x + self.y * self.y + self.z * self.z
+    }
+    pub fn muls(&self, s: f32) -> Pos3 {
+        Pos3 { x: self.x * s, y: self.y * s, z: self.z * s }
+    }
+    pub fn qangle(&self) -> Pos3 {
+        let tmp;
+        let yaw;
+        let pitch;
+
+        if self.y == 0.0 && self.x == 0.0 {
+            yaw = 0.0;
+            if self.z > 0.0 {
+                pitch = 270.0;
+            }
+            else {
+                pitch = 90.0;
+            }
+        }
+        else {
+            yaw = f32::atan2(self.y, self.x).to_degrees();
+            tmp = (self.x * self.x + self.y * self.y).sqrt();
+            pitch = f32::atan2(-self.z, tmp).to_degrees();
+        }
+        Pos3 { x: pitch, y: yaw, z: 0.0 }
+    }
+
+    pub fn qvec(&self) -> Pos3 {
+        let pitch = self.x.to_radians();
+        let (sp, cp) = pitch.sin_cos();
+        let yaw = self.y.to_radians();
+        let (sy, cy) = yaw.sin_cos();
+        Pos3 { x: cp * cy, y: cp * sy, z: -sp }
+    }
 }
+
+#[derive(Debug, Clone, Default, PartialEq, Copy)]
+pub struct WeaponX {
+    pub weapon_handle: u64,
+    pub weapon_entity: u64,
+    pub index: u16,
+    pub projectile_speed: f32,
+    pub projectile_scale: f32,
+    pub zoom_fov: f32,
+    pub ammo: u16,
+    pub semi_auto: u16,
+    pub selected_slot: u8,
+}
+impl WeaponX {
+    /// addr -> local_player address
+    pub fn update(&mut self, vp: VmmProcess, addr: u64, base: u64) {
+
+        self.weapon_handle = read_u64(vp, addr + WEAPON);
+        self.weapon_handle &= 0xffff;
+        self.weapon_entity = read_u64(vp, base + CL_ENTITYLIST + (self.weapon_handle << 5));
+        self.index = read_u16(vp, self.weapon_entity + WEAPON_NAME);
+        self.projectile_speed = read_f32(vp, self.weapon_entity + BULLET_SPEED);
+        self.projectile_scale = read_f32(vp, self.weapon_entity + BULLET_SCALE);
+        self.zoom_fov = read_f32(vp, self.weapon_entity + ZOOM_FOV);
+        self.ammo = read_u16(vp, self.weapon_entity + AMMO);
+        self.semi_auto = read_u16(vp, self.weapon_entity + SEMI_AUTO);
+        self.selected_slot = read_u8(vp, addr + SELECTED_SLOT);
+
+        println!("wephandle -> {:x}", self.weapon_handle);
+        println!("wep_entity -> {:x}", self.weapon_entity);
+        println!("index -> {:?}", self.index);
+        println!("projectile_speed -> {:?}", self.projectile_speed);
+        println!("projectile_scale -> {:?}", self.projectile_scale);
+        println!("zoom_fov -> {:?}", self.zoom_fov);
+        println!("ammo -> {:?}", self.ammo);
+        println!("semi_auto -> {:?}", self.semi_auto);
+        println!("selected_slot -> {:?}", self.selected_slot);
+        // let raw = read_mem(vp, self.weapon_entity + BITFIELD_FROM_PLAYER, 0x10);
+        // let b1 = read_u16(vp, self.weapon_entity + BITFIELD_FROM_PLAYER);
+        // let b2 = read_u16(vp, self.weapon_entity + BITFIELD_INTERNAL);
+        // let b3 = read_u16(vp, self.weapon_entity + BITFIELD_CURRENT);
+        // let b4 = read_u16(vp, self.weapon_entity + BITFIELD_DISABLED);
+        //
+        // println!("raw -> {:?}", raw.hex_dump());
+        // println!("b1 -> {:?}\n b2 -> {:?}\n b3 -> {:?}\n b4 -> {:?}", b1, b2, b3, b4)
+    }
+}
+
+
+
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Status {
@@ -104,7 +200,6 @@ pub struct Status {
     pub team_index: u16,
     pub name: String,
     pub platform_id: u64,
-
 }
 
 impl Status {
@@ -159,6 +254,9 @@ impl Status {
 
         self.dead = data.read_u16(LIFE_STATE); // 0x06c8
         self.knocked = data.read_u16(BLEED_OUT_STATE); // 0x26a0
+
+
+
         // let mut da = CharacterType::default();
         // da.initialize_character_type();
         // self.character = da.check_character_type(self.skin);
@@ -213,9 +311,11 @@ impl LocalPlayer {
 
     pub fn update_position(&mut self, vp: VmmProcess) {
         self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
+        self.camera_position = Pos3::from_array(read_f32_vec(vp, self.pointer + CAMERA_POSITION, 3).as_slice().try_into().unwrap());
+        // self.camera_angle = read_f32_vec(vp, self.pointer + CAMERA_ANGLES, 2).as_slice().try_into().unwrap();
         // let local: Vec<f32> = read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap();
         // let vec: Vec<f32> = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-        // println!("local -> {:?}", local);
+        // println!("angles -> {:?}", self.camera_angle);
         // println!("vec -> {:?}", vec);
     }
 
@@ -523,7 +623,8 @@ impl Player {
     }
 
     pub fn update_distance(&mut self, vp: VmmProcess, pos: &Pos3) {
-        self.distance = distance3d(&self.position, pos)
+        self.distance = distance3d(&self.position, pos);
+        self.distance_2d = distance2d(&self.position.to_pos2(), &pos.to_pos2())
     }
     pub fn update_bone_index(&mut self, vp: VmmProcess) {
         let model_pointer = read_u64(vp, self.pointer + STUDIOHDR);
@@ -1178,3 +1279,206 @@ impl KeyData {
         }
     }
 }
+
+#[derive(Copy, Clone, Debug)]
+pub enum Map {
+    CanyonlandsMu3,
+    DesertlandsMu3,
+    OlympusMu2,
+    TropicIslandMu1,
+    Lobby,
+}
+impl Map {
+    pub fn get_map(v: String) -> Map {
+        match v.as_str() {
+            "mp_lobby" => { Map::Lobby },
+            _ => { Map::Lobby }
+        }
+    }
+
+    pub fn get_position(&self) -> Pos2 {
+        match self {
+            Map::CanyonlandsMu3 => { Pos2::new(1.0, 1.0) }
+            _ => { Pos2::new(1.0, 1.0) }
+        }
+    }
+}
+
+
+#[derive(Copy, Clone, Debug)]
+pub struct Pitch {
+    pub view: f32,
+    pub launch: f32,
+}
+
+pub fn launch2view(pitches: &[Pitch], launch: f32) -> f32 {
+    if pitches.len() < 2 {
+        return launch;
+    }
+
+    let mut low = 0;
+    let mut high = pitches.len() - 1;
+    while low + 1 != high {
+        let middle = (low + high) / 2;
+        let entry = match pitches.get(middle) { Some(e) => e, None => return launch };
+        if launch < entry.launch {
+            high = middle;
+        }
+        else {
+            low = middle;
+        }
+    }
+
+    let low = match pitches.get(low) { Some(e) => e, None => return launch };
+    let high = match pitches.get(high) { Some(e) => e, None => return launch };
+
+    let fraction = (launch - low.launch) / (high.launch - low.launch);
+    low.view + fraction * (high.view - low.view)
+}
+
+pub fn view2launch(pitches: &[Pitch], view: f32) -> f32 {
+    if pitches.len() < 2 {
+        return view;
+    }
+
+    let mut low = 0;
+    let mut high = pitches.len() - 1;
+    while low + 1 != high {
+        let middle = (low + high) / 2;
+        let entry = match pitches.get(middle) { Some(e) => e, None => return view };
+        if view < entry.view {
+            high = middle;
+        }
+        else {
+            low = middle;
+        }
+    }
+
+    let low = match pitches.get(low) { Some(e) => e, None => return view };
+    let high = match pitches.get(high) { Some(e) => e, None => return view };
+
+    let fraction = (view - low.view) / (high.view - low.view);
+    low.launch + fraction * (high.launch - low.launch)
+}
+
+// Thermite and Frag Grenades
+pub static GRENADE_PITCHES: [Pitch; 49] = [
+    Pitch { view: -1.5533, launch: -1.3990 }, // 89
+    Pitch { view: -1.4837, launch: -1.3267 }, // 85
+    Pitch { view: -1.3962, launch: -1.2433 }, // 80
+    Pitch { view: -1.3092, launch: -1.1534 }, // 75
+    Pitch { view: -1.2217, launch: -1.0779 }, // 70
+    Pitch { view: -1.1347, launch: -0.9783 }, // 65
+    Pitch { view: -1.0472, launch: -0.8977 }, // 60
+    Pitch { view: -0.9602, launch: -0.8104 }, // 55
+    Pitch { view: -0.8727, launch: -0.7268 }, // 50
+    Pitch { view: -0.7857, launch: -0.6375 }, // 45
+    Pitch { view: -0.6981, launch: -0.5439 }, // 40
+    Pitch { view: -0.6112, launch: -0.4688 }, // 35
+    Pitch { view: -0.5236, launch: -0.3880 }, // 30
+    Pitch { view: -0.3491, launch: -0.2050 }, // 25
+    Pitch { view: -0.3491, launch: -0.2050 }, // 20
+    Pitch { view: -0.2615, launch: -0.1165 }, // 15
+    Pitch { view: -0.1746, launch: -0.0421 }, // 10
+    Pitch { view: -0.0870, launch: 0.0644 },  //  5
+    Pitch { view: -0.0001, launch: 0.1403 },  //  0
+    Pitch { view: 0.0875, launch: 0.2358 },   // -5
+    Pitch { view: 0.1745, launch: 0.3061 },   //-10
+    Pitch { view: 0.2620, launch: 0.3753 },   //-15
+    Pitch { view: 0.3490, launch: 0.4684 },   //-20
+    Pitch { view: 0.4365, launch: 0.5343 },   //-25
+    Pitch { view: 0.5235, launch: 0.6238 },   //-30
+    Pitch { view: 0.6110, launch: 0.6865 },   //-35
+    Pitch { view: 0.6979, launch: 0.7756 },   //-40
+    Pitch { view: 0.7331, launch: 0.7968 },   //-42
+    Pitch { view: 0.7682, launch: 0.8341 },   //-44
+    Pitch { view: 0.8027, launch: 0.8771 },   //-46
+    Pitch { view: 0.8379, launch: 0.9038 },   //-48
+    Pitch { view: 0.8727, launch: 0.9382 },   //-50
+    Pitch { view: 0.9079, launch: 0.9620 },   //-52
+    Pitch { view: 0.9424, launch: 1.0048 },   //-54
+    Pitch { view: 0.9775, launch: 1.0333 },   //-56
+    Pitch { view: 1.0121, launch: 1.0561 },   //-58
+    Pitch { view: 1.0472, launch: 1.0987 },   //-60
+    Pitch { view: 1.0824, launch: 1.1217 },   //-62
+    Pitch { view: 1.1175, launch: 1.1628 },   //-64
+    Pitch { view: 1.1520, launch: 1.1868 },   //-66
+    Pitch { view: 1.1866, launch: 1.2239 },   //-68
+    Pitch { view: 1.2217, launch: 1.2555 },   //-70
+    Pitch { view: 1.2563, launch: 1.2859 },   //-72
+    Pitch { view: 1.2913, launch: 1.3156 },   //-74
+    Pitch { view: 1.3264, launch: 1.3470 },   //-76
+    Pitch { view: 1.3615, launch: 1.3822 },   //-78
+    Pitch { view: 1.3973, launch: 1.4108 },   //-80
+    Pitch { view: 1.4837, launch: 1.4919 },   //-85
+    Pitch { view: 1.5533, launch: 1.5546 },   //-89
+];
+
+// Arc Star
+pub static ARC_PITCHES: [Pitch; 19] = [
+    Pitch { view: -1.5533, launch: -1.5198 },
+    Pitch { view: -1.3967, launch: -1.3672 },
+    Pitch { view: -1.2222, launch: -1.1974 },
+    Pitch { view: -1.0477, launch: -1.0260 },
+    Pitch { view: -0.8731, launch: -0.8550 },
+    Pitch { view: -0.6986, launch: -0.6848 },
+    Pitch { view: -0.5241, launch: -0.5129 },
+    Pitch { view: -0.3496, launch: -0.3416 },
+    Pitch { view: -0.1572, launch: -0.1484 },
+    Pitch { view: 0.0000, launch: 0.0080 },
+    Pitch { view: 0.1751, launch: 0.1800 },
+    Pitch { view: 0.3496, launch: 0.3520 },
+    Pitch { view: 0.5241, launch: 0.5234 },
+    Pitch { view: 0.6992, launch: 0.6978 },
+    Pitch { view: 0.8727, launch: 0.8710 },
+    Pitch { view: 1.0472, launch: 1.0453 },
+    Pitch { view: 1.2218, launch: 1.2201 },
+    Pitch { view: 1.3963, launch: 1.3956 },
+    Pitch { view: 1.5533, launch: 1.5533 },
+];
+
+// Grenadier Thermite and Frag Grenades
+pub static GRENADIER_GRENADE_PITCHES: [Pitch; 19] = [
+    Pitch { view: -1.5533, launch: -1.3991 },
+    Pitch { view: -1.3973, launch: -1.2456 },
+    Pitch { view: -1.2227, launch: -1.0736 },
+    Pitch { view: -1.0477, launch: -0.9010 },
+    Pitch { view: -0.8737, launch: -0.7293 },
+    Pitch { view: -0.6992, launch: -0.5562 },
+    Pitch { view: -0.5247, launch: -0.3832 },
+    Pitch { view: -0.3507, launch: -0.2101 },
+    Pitch { view: -0.1762, launch: -0.0358 },
+    Pitch { view: 0.0000, launch: 0.1406 },
+    Pitch { view: 0.1745, launch: 0.2984 },
+    Pitch { view: 0.3496, launch: 0.4565 },
+    Pitch { view: 0.5247, launch: 0.6157 },
+    Pitch { view: 0.6987, launch: 0.7741 },
+    Pitch { view: 0.8732, launch: 0.9331 },
+    Pitch { view: 1.0477, launch: 1.0924 },
+    Pitch { view: 1.2222, launch: 1.2519 },
+    Pitch { view: 1.3973, launch: 1.4120 },
+    Pitch { view: 1.5533, launch: 1.5548 },
+];
+
+// Grenadier Arc Star
+pub static GRENADIER_ARC_PITCHES: [Pitch; 19] = [
+    Pitch { view: -1.5533, launch: -1.5193 },
+    Pitch { view: -1.3973, launch: -1.3657 },
+    Pitch { view: -1.2222, launch: -1.1931 },
+    Pitch { view: -1.0477, launch: -1.0210 },
+    Pitch { view: -0.8731, launch: -0.8485 },
+    Pitch { view: -0.6986, launch: -0.6759 },
+    Pitch { view: -0.5241, launch: -0.5034 },
+    Pitch { view: -0.3496, launch: -0.3297 },
+    Pitch { view: -0.1751, launch: -0.1554 },
+    Pitch { view: 0.0000, launch: 0.0190 },
+    Pitch { view: 0.1763, launch: 0.1916 },
+    Pitch { view: 0.3502, launch: 0.3624 },
+    Pitch { view: 0.5241, launch: 0.5339 },
+    Pitch { view: 0.6992, launch: 0.7065 },
+    Pitch { view: 0.8737, launch: 0.8792 },
+    Pitch { view: 1.0480, launch: 1.0518 },
+    Pitch { view: 1.2220, launch: 1.2251 },
+    Pitch { view: 1.3965, launch: 1.3976 },
+    Pitch { view: 1.5533, launch: 1.5534 },
+];

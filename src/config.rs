@@ -38,6 +38,7 @@ pub struct HitboxConfig {
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub struct AimConfig {
     pub distance: f32,
+    pub pitch: f32,
     pub team_check: bool,
     pub aim_assist: AimAssistConfig,
     pub trigger_bot: TriggerBotConfig,

@@ -265,6 +265,16 @@ pub fn edit_aimbot_config(aim_config: &mut AimConfig, ui: &mut Ui) {
                     );
                 });
             });
+
+            ui.vertical(|ui| {
+
+                ui.horizontal(|ui| {
+                    ui.label("pitch -> ");
+                    ui.add(
+                        Slider::new(&mut aim_config.pitch, -89.0..=89.0).step_by(0.1)
+                    );
+                });
+            });
         });
     });
 }

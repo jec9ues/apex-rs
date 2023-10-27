@@ -1,5 +1,5 @@
 use egui_backend::egui::Pos2;
-use crate::data::Pos3;
+use crate::data::{LocalPlayer, Pos3};
 
 pub fn world_to_screen(matrix: [[f32; 4]; 4], vector: Pos3, screen_size: Pos2) -> Pos2 {
     let transformed = [
@@ -21,13 +21,18 @@ pub fn world_to_screen(matrix: [[f32; 4]; 4], vector: Pos3, screen_size: Pos2) -
 
     Pos2::new(half_resolution.x + x * half_resolution.x, half_resolution.y - y * half_resolution.y)
 }
+pub fn angles_to_screen(lp: &LocalPlayer, a: Pos3, screen_size: Pos2) -> Pos2 {
+    let dir = a.qvec();
+    let point = lp.camera_position.add(&dir.muls(1000.0));
+    world_to_screen(lp.view_matrix, point, screen_size)
+}
 
 pub fn distance3d(a: &Pos3, b: &Pos3) -> f32 {
     ((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y) + (b.z - a.z) * (b.z - a.z)).sqrt() / 39.3701
 }
 
 pub fn distance2d(a: &Pos2, b: &Pos2) -> f32 {
-    ((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)).sqrt()
+    ((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y)).sqrt() / 39.3701
 }
 
 pub fn calculate_desired_yaw(from: Pos3, to: Pos3) -> f32{
@@ -57,6 +62,16 @@ pub  fn flip_yaw_if_needed(angle: f32) -> f32 {
         my_angle = (360.0 - my_angle) * -1.0;
     } else if my_angle < -180.0 {
         my_angle = (360.0 + my_angle);
+    }
+    my_angle
+}
+
+pub  fn flip_yaw(angle: f32) -> f32 {
+    let mut my_angle = angle;
+    if my_angle > 0.0 {
+        my_angle = (180.0 - my_angle) * -1.0;
+    } else {
+        my_angle = (180.0 + my_angle);
     }
     my_angle
 }

@@ -34,11 +34,12 @@ use log::{debug, info};
 use memprocfs::*;
 use crate::cache::Data;
 use crate::function::*;
-use crate::math::world_to_screen;
+use crate::math::{angles_to_screen, calculate_desired_yaw, flip_yaw, flip_yaw_if_needed, world_to_screen};
 use crate::mem::*;
 use rand::Rng;
 use crate::aimbot::main_aimbot;
 use crate::config::{Config, MenuConfig};
+use crate::data::Pos3;
 use crate::menu::{edit_aimbot_config, edit_esp_config, edit_glow_config, edit_screen_size, edit_world_config};
 use crate::network::verify_key;
 
@@ -149,6 +150,45 @@ impl EguiOverlay for Menu {
             }
             Err(_) => {}
         };
+
+        fn calculate_grenade_pitch(distance: f32) -> f32 {
+            let initial_value = -84.0;
+            let initial_second_data = 10.0;
+            let final_value = -81.0;
+            let final_second_data = 15.0;
+
+            let growth_rate = (final_value - initial_value) / (final_second_data - initial_second_data);
+
+            let first_data = initial_value + (distance - initial_second_data) * growth_rate;
+
+            // 限制第一个数据的范围在 -89 到 89 之间
+            if first_data < -89.0 {
+                return -89.0;
+            } else if first_data > 89.0 {
+                return 89.0;
+            }
+
+            first_data
+        }
+
+        for (_, player) in &self.data.cache_data.players {
+            let grenade_yaw = calculate_desired_yaw(self.data.cache_data.local_player.camera_position, player.position);
+            let grenade_pitch = calculate_grenade_pitch(player.distance_2d);
+            // println!("pitch -> {grenade_pitch} yaw -> {grenade_yaw}");
+            let np = angles_to_screen(
+                &self.data.cache_data.local_player,
+                Pos3 {/*pitch*/ x: -grenade_pitch,
+                         /*yaw*/   y: flip_yaw(grenade_yaw) , z: 0.0},
+                self.data.config.screen.size,
+            );
+            overlay.circle(np, 5.0, Color32::TRANSPARENT,
+                           Stroke::new(2.0, Color32::GREEN));
+        }
+        // println!("{:?}", self.data.cache_data.local_player.camera_position);
+        // println!("{:?}", np);
+
+        // overlay.line_segment([self.data.cache_data.local_player.hitbox.head.position_2d,
+        // cp], Stroke::new(2.0, Color32::BLUE));
         // println!("most far distance -> {}", self.data.get_near_pointer());
         // self.data.draw_bones_width(overlay.clone());
         if self.menu_config.config.esp.enable {
@@ -186,6 +226,8 @@ impl EguiOverlay for Menu {
 
             self.data.dbg_view(ui);
             ui.label(format!("{:?}", self.data.cache_data.local_player.position));
+            ui.label(format!("pitch -> {:?}", self.data.cache_data.local_player.pitch));
+            ui.label(format!("yaw -> {:?}", self.data.cache_data.local_player.yaw));
             if ui.button("📋").clicked() {
                 ui.output_mut(|o| o.copied_text = format!("{:?}", self.data.cache_data.local_player.position));
             }
@@ -332,4 +374,19 @@ pub fn convert_coordinates( player_x: f32, player_y: f32, map_width: f32, map_he
 
     (map_x, map_y)
 }
+
+/*function getDataByLevelName(levelName: string) {
+switch (levelName) {
+case 'mp_rr_canyonlands_mu3':
+return {x: -37541, y: 43886};
+case 'mp_rr_desertlands_mu3':
+return {x: -45056, y: 45055};
+case 'mp_rr_olympus_mu2':
+return {x: -52024, y: 48025};
+case 'mp_rr_tropic_island_mu1':
+return {x: -50606, y: 52139};
+default:
+return;
+}
+}*/
 
