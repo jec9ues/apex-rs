@@ -80,9 +80,9 @@ fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
 fn main() {
     log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
-        // if verify_key().unwrap() != "valid" {
-        //     std::process::exit(1);
-        // }
+    // if verify_key().unwrap() != "valid" {
+    //     std::process::exit(1);
+    // }
 
 
     let (config_sender, config_receiver) = bounded::<Config>(1);
@@ -178,7 +178,7 @@ impl EguiOverlay for Menu {
             let np = angles_to_screen(
                 &self.data.cache_data.local_player,
                 Pos3 {/*pitch*/ x: -grenade_pitch,
-                         /*yaw*/   y: flip_yaw(grenade_yaw) , z: 0.0},
+                    /*yaw*/   y: flip_yaw(grenade_yaw) , z: 0.0},
                 self.data.config.screen.size,
             );
             overlay.circle(np, 5.0, Color32::TRANSPARENT,
@@ -298,40 +298,40 @@ impl EguiOverlay for Menu {
                 });
         });
 
-/*        egui_backend::egui::Window::new("Map").title_bar(false).show(egui_context, |ui| {
-            let texture: &TextureHandle = self.texture.get_or_insert_with(|| {
-                // Load the texture only once.
-                let path: PathBuf = env::current_dir().unwrap();
-                ui.ctx().load_texture(
-                    "Olympus_MU2_REV1.webp",
-                    load_image_from_path(&path.join("Olympus_MU1.webp")).unwrap(),
-                    Default::default()
-                )
-            });
-            // ui.image(texture, Vec2::new(1024.0, 1024.0));
-            let map_ptr = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("map_ptr")), Rect::EVERYTHING);
-            let player_pos = convert_coordinates(
-                self.data.cache_data.local_player.position.x,
-                self.data.cache_data.local_player.position.y,
-                self.data.config.world.world_min_x,
-                self.data.config.world.world_min_y,
-            );
-            for player in &self.data.cache_data.players {
-                // player.1.box_esp(overlay.clone());
-                player.1.map_esp(overlay.clone(), ui.min_rect().min, [self.menu_config.config.world.world_min_x, self.menu_config.config.world.world_min_y]);
+        /*        egui_backend::egui::Window::new("Map").title_bar(false).show(egui_context, |ui| {
+                    let texture: &TextureHandle = self.texture.get_or_insert_with(|| {
+                        // Load the texture only once.
+                        let path: PathBuf = env::current_dir().unwrap();
+                        ui.ctx().load_texture(
+                            "Olympus_MU2_REV1.webp",
+                            load_image_from_path(&path.join("Olympus_MU1.webp")).unwrap(),
+                            Default::default()
+                        )
+                    });
+                    // ui.image(texture, Vec2::new(1024.0, 1024.0));
+                    let map_ptr = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("map_ptr")), Rect::EVERYTHING);
+                    let player_pos = convert_coordinates(
+                        self.data.cache_data.local_player.position.x,
+                        self.data.cache_data.local_player.position.y,
+                        self.data.config.world.world_min_x,
+                        self.data.config.world.world_min_y,
+                    );
+                    for player in &self.data.cache_data.players {
+                        // player.1.box_esp(overlay.clone());
+                        player.1.map_esp(overlay.clone(), ui.min_rect().min, [self.menu_config.config.world.world_min_x, self.menu_config.config.world.world_min_y]);
 
-            }
-            //Pos3 { x: -830.64374, y: 14927.562, z: -5838.49 }
-            //Pos3 { x: -830.6441, y: 14927.562, z: -5838.49 }
+                    }
+                    //Pos3 { x: -830.64374, y: 14927.562, z: -5838.49 }
+                    //Pos3 { x: -830.6441, y: 14927.562, z: -5838.49 }
 
-            // Right Bottom Pos3 { x: 21686.338, y: -26536.438, z: 3607.3196 } king
-            // left top Pos3 { x: -29279.21, y: 25624.809, z: 3310.6152 } king
-            // left top Pos3 { x: -30171.703, y: 32398.465, z: -3045.3596 } edge
-            // right bottom Pos3 { x: 22957.547, y: -43407.934, z: -1930.706 } edge
-            map_ptr.circle(Pos2 { x: ui.min_rect().min.x + player_pos.0, y: ui.min_rect().min.y + player_pos.1},
-                           1.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
-            map_ptr.circle(ui.min_rect().min, 1.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
-        });*/
+                    // Right Bottom Pos3 { x: 21686.338, y: -26536.438, z: 3607.3196 } king
+                    // left top Pos3 { x: -29279.21, y: 25624.809, z: 3310.6152 } king
+                    // left top Pos3 { x: -30171.703, y: 32398.465, z: -3045.3596 } edge
+                    // right bottom Pos3 { x: 22957.547, y: -43407.934, z: -1930.706 } edge
+                    map_ptr.circle(Pos2 { x: ui.min_rect().min.x + player_pos.0, y: ui.min_rect().min.y + player_pos.1},
+                                   1.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
+                    map_ptr.circle(ui.min_rect().min, 1.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
+                });*/
         match self.config_sender.try_send(self.menu_config.config) {
             Ok(_) => {}
             Err(_) => {}

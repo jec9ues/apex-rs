@@ -17,7 +17,7 @@ use pretty_hex::*;
 use mouse_rs::{types::keys::Keys, Mouse};
 use rdev::{EventType, simulate};
 use crate::data::{Bone, GRENADE_PITCHES, launch2view, LocalPlayer, Pitch, Player, Pos3, WeaponX};
-use crate::egui_overlay::egui::Pos2;
+use crate::egui_overlay::EguiOverlay;
 
 
 fn move_and_press() {

@@ -1,5 +1,5 @@
 [package]
-name = "backend_menu"
+name = "frontend-overlay"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 egui_backend = { version = "*", features = ["egui_serde"] }
-egui_window_glfw_passthrough = "*"
+egui_window_glfw_passthrough = "0.4.2"
 crossbeam-channel = "*"
 egui_render_three_d = "*"
 
