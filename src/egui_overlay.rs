@@ -26,8 +26,7 @@ pub fn start<T: EguiOverlay + 'static>(user_data: T) {
                 );
             }),
             ..Default::default()
-        },
-        BackendConfig {
+        },        BackendConfig {
             #[cfg(not(target_os = "macos"))]
             is_opengl: true,
             #[cfg(target_os = "macos")]

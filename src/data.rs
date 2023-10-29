@@ -8,12 +8,11 @@ use pretty_hex::PrettyHex;
 use crate::constants::offsets::*;
 use crate::function::*;
 use crate::math::*;
-use crate::mem::*;
 use named_constants::named_constants;
 use serde::{Deserialize, Serialize};
 use crate::convert_coordinates;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Player {
     pub index: u64,
     pub pointer: u64,
@@ -29,7 +28,7 @@ pub struct Player {
 }
 
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Hitbox {
     pub head: Bone,
     pub neck: Bone,
@@ -51,14 +50,14 @@ pub struct Hitbox {
     pub right_foot: Bone,
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Bone {
     pub index: usize,
     pub position: Pos3,
     pub position_2d: Pos2,
 }
 
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Pos3 {
     pub x: f32,
 
@@ -142,45 +141,12 @@ pub struct WeaponX {
     pub semi_auto: u16,
     pub selected_slot: u8,
 }
-impl WeaponX {
-    /// addr -> local_player address
-    pub fn update(&mut self, vp: VmmProcess, addr: u64, base: u64) {
-
-        self.weapon_handle = read_u64(vp, addr + WEAPON);
-        self.weapon_handle &= 0xffff;
-        self.weapon_entity = read_u64(vp, base + CL_ENTITYLIST + (self.weapon_handle << 5));
-        self.index = read_u16(vp, self.weapon_entity + WEAPON_NAME);
-        self.projectile_speed = read_f32(vp, self.weapon_entity + BULLET_SPEED);
-        self.projectile_scale = read_f32(vp, self.weapon_entity + BULLET_SCALE);
-        self.zoom_fov = read_f32(vp, self.weapon_entity + ZOOM_FOV);
-        self.ammo = read_u16(vp, self.weapon_entity + AMMO);
-        self.semi_auto = read_u16(vp, self.weapon_entity + SEMI_AUTO);
-        self.selected_slot = read_u8(vp, addr + SELECTED_SLOT);
-
-        println!("wephandle -> {:x}", self.weapon_handle);
-        println!("wep_entity -> {:x}", self.weapon_entity);
-        println!("index -> {:?}", self.index);
-        println!("projectile_speed -> {:?}", self.projectile_speed);
-        println!("projectile_scale -> {:?}", self.projectile_scale);
-        println!("zoom_fov -> {:?}", self.zoom_fov);
-        println!("ammo -> {:?}", self.ammo);
-        println!("semi_auto -> {:?}", self.semi_auto);
-        println!("selected_slot -> {:?}", self.selected_slot);
-        // let raw = read_mem(vp, self.weapon_entity + BITFIELD_FROM_PLAYER, 0x10);
-        // let b1 = read_u16(vp, self.weapon_entity + BITFIELD_FROM_PLAYER);
-        // let b2 = read_u16(vp, self.weapon_entity + BITFIELD_INTERNAL);
-        // let b3 = read_u16(vp, self.weapon_entity + BITFIELD_CURRENT);
-        // let b4 = read_u16(vp, self.weapon_entity + BITFIELD_DISABLED);
-        //
-        // println!("raw -> {:?}", raw.hex_dump());
-        // println!("b1 -> {:?}\n b2 -> {:?}\n b3 -> {:?}\n b4 -> {:?}", b1, b2, b3, b4)
-    }
-}
 
 
 
 
-#[derive(Debug, Clone, Default, PartialEq)]
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Status {
     pub dead: u16,
     pub knocked: u16,
@@ -203,70 +169,7 @@ pub struct Status {
 }
 
 impl Status {
-    /// addr -> entity pointer
-    pub fn initialize(&mut self, vp: VmmProcess, addr: u64, base: u64, index: u64) {
-        let data = ContinuingData::new(read_mem(vp, addr, 0x4600));
-        self.health = data.read_u16(HEALTH); // 0x036c
-        self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
 
-        self.shield = data.read_u16(SHIELD); // 0x01a0
-        self.max_shield = data.read_u16(MAX_SHIELD); // 0x01a4
-
-        self.armor_type = data.read_u16(ARMOR_TYPE); // 0x45c4
-        self.helmet_type = data.read_u16(HELMET_TYPE); // 0x45c0
-        self.skin = data.read_u16(CURRENT_FRAMEMODEL_INDEX); // 0x00d8
-
-
-        self.team = data.read_u16(TEAM_NUM);
-        self.team_index = data.read_u16(TEAM_MEMBER_INDEX);
-
-        self.dead = data.read_u16(LIFE_STATE); // 0x06c8
-        self.knocked = data.read_u16(BLEED_OUT_STATE); // 0x26a0
-
-        self.platform_id = data.read_u64(PLATFORM_USER_ID); // 0x2508
-
-        let name_ptr = read_u64(vp, base + NAME_LIST + (index - 1) * 0x10);
-        self.name = read_string(vp, name_ptr);
-        // println!("squad id -> {}", self.name)
-    }
-
-    pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
-        let data = ContinuingData::new(read_mem(vp, *addr, 0x4600));
-        self.health = data.read_u16(HEALTH); // 0x036c
-        self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
-
-        self.shield = data.read_u16(SHIELD); // 0x01a0
-        self.max_shield = data.read_u16(MAX_SHIELD); // 0x01a4
-
-        self.armor_type = data.read_u16(ARMOR_TYPE); // 0x45c4
-        self.helmet_type = data.read_u16(HELMET_TYPE); // 0x45c0
-        self.skin = data.read_u16(CURRENT_FRAMEMODEL_INDEX); // 0x00d8
-
-        // let player_data_ptr = read_u64(vp, addr + PLAYER_DATA);
-        // let player_datas = read_u16(vp, player_data_ptr + LEGENDARY_MODEL_INDEX);
-        // let player_data = read_mem(vp, addr + PLAYER_DATA, 0x100);
-
-        self.previous_last_visible_time = self.last_visible_time;
-        self.previous_last_crosshair_target_time = self.last_crosshair_target_time;
-
-        self.last_visible_time = data.read_f32(LAST_VISIBLE_TIME); // 0x19B0
-        self.last_crosshair_target_time = data.read_f32(LAST_VISIBLE_TIME + 0x8); // 0x19B0
-
-        self.dead = data.read_u16(LIFE_STATE); // 0x06c8
-        self.knocked = data.read_u16(BLEED_OUT_STATE); // 0x26a0
-
-
-
-        // let mut da = CharacterType::default();
-        // da.initialize_character_type();
-        // self.character = da.check_character_type(self.skin);
-
-        // let da = read_mem(vp, addr + LAST_VISIBLE_TIME, 0x30);
-        // info!("ptr -> {:x} data -> {} direct -> {:?}", player_data_ptr, player_datas, player_data.hex_dump())
-        // info!("last visible time -> {}", self.last_visible_time);
-        // info!("data -> {:?}", da.hex_dump());
-        // println!("test -> {:?}", self)
-    }
 
     pub fn visible(&self) -> bool {
         // (self.last_visible_time - self.previous_last_visible_time) > 0.01
@@ -285,7 +188,7 @@ impl Status {
 }
 
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LocalPlayer {
     pub pointer: u64,
     pub render_pointer: u64,
@@ -300,163 +203,9 @@ pub struct LocalPlayer {
     pub hitbox: Hitbox,
 }
 
-impl LocalPlayer {
-    pub fn update_pointer(&mut self, vp: VmmProcess, base: u64) {
-        self.pointer = read_u64(vp, base + LOCAL_PLAYER);
-        self.render_pointer = read_u64(vp, base + VIEW_RENDER);
-        self.matrix_pointer = read_u64(vp, self.render_pointer + VIEW_MATRIX);
 
-        self.bone_pointer = read_u64(vp, self.pointer + BONE);
-    }
 
-    pub fn update_position(&mut self, vp: VmmProcess) {
-        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
-        self.camera_position = Pos3::from_array(read_f32_vec(vp, self.pointer + CAMERA_POSITION, 3).as_slice().try_into().unwrap());
-        // self.camera_angle = read_f32_vec(vp, self.pointer + CAMERA_ANGLES, 2).as_slice().try_into().unwrap();
-        // let local: Vec<f32> = read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap();
-        // let vec: Vec<f32> = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-        // println!("angles -> {:?}", self.camera_angle);
-        // println!("vec -> {:?}", vec);
-    }
-
-    pub fn update_view_matrix(&mut self, vp: VmmProcess) {
-        self.view_matrix = read_f32_vec(vp, self.matrix_pointer, 16)
-            .chunks_exact(4)
-            .map(|chunk| chunk.try_into().unwrap())
-            .collect::<Vec<[f32; 4]>>()
-            .try_into()
-            .unwrap();
-    }
-
-    pub fn update_angle(&mut self, vp: VmmProcess) {
-        let angle = read_f32_vec(vp, self.pointer + VIEW_ANGLE, 2);
-        self.pitch = *angle.get(0).unwrap();
-        self.yaw = *angle.get(1).unwrap();
-    }
-    pub fn set_angle(&mut self, vp: VmmProcess, pitch: f32, yaw: f32) {
-        if pitch.is_infinite() || yaw.is_infinite() {
-            return;
-        }
-        let mut angle: Vec<f32> = Vec::new();
-        angle.push(pitch);
-        angle.push(yaw);
-        write_f32_vec(vp, self.pointer + VIEW_ANGLE, angle);
-    }
-    pub fn set_pitch(&mut self, vp: VmmProcess, pitch: f32) {
-        write_f32(vp, self.pointer + VIEW_ANGLE, pitch);
-    }
-    pub fn set_yaw(&mut self, vp: VmmProcess, yaw: f32) {
-        write_f32(vp, self.pointer + VIEW_ANGLE + 0x4, yaw);
-    }
-
-    pub fn update_bone_index(&mut self, vp: VmmProcess) {
-        let model_pointer = read_u64(vp, self.pointer + STUDIOHDR);
-        let studio_hdr = read_u64(vp, model_pointer + 0x8);
-
-        let hitbox_cache = read_u16(vp, studio_hdr + 0x34) as u64;
-        let hitbox_array = studio_hdr + ((hitbox_cache & 0xFFFE) << (4 * (hitbox_cache & 1)));
-
-        let index_cache = read_u16(vp, hitbox_array + 0x4);
-        let hitbox_index = (index_cache & 0xFFFE) << (4 * (index_cache & 1));
-        // 19 is bone amount we need
-        let data = read_mem(vp, hitbox_index as u64 + hitbox_array, 20 * 0x20);
-        // println!("{:?}", data.hex_dump());
-        let bone_index: Vec<u16> = data.chunks_exact(0x20)
-            .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
-            .collect();
-
-        // println!("{} -> {:?}", self.pointer, bone_index);
-        /*        if bone_index.iter().any(|&x| x > 240) {
-                    Err(DataError::BoneError)
-                };*/
-
-        if self.status.character == Character::Bloodhound {
-            self.hitbox.head.index = bone_index[0] as usize;
-            self.hitbox.neck.index = bone_index[1] as usize;
-            self.hitbox.upper_chest.index = bone_index[2] as usize;
-            self.hitbox.lower_chest.index = bone_index[3] as usize;
-            self.hitbox.stomach.index = bone_index[4] as usize;
-            self.hitbox.hip.index = bone_index[5] as usize;
-            self.hitbox.left_shoulder.index = bone_index[6] as usize;
-            self.hitbox.left_elbow.index = bone_index[7] as usize;
-            self.hitbox.left_hand.index = bone_index[19] as usize;
-            self.hitbox.right_shoulder.index = bone_index[8] as usize;
-            self.hitbox.right_elbow.index = bone_index[9] as usize;
-            self.hitbox.right_hand.index = bone_index[10] as usize;
-            self.hitbox.left_thigh.index = bone_index[11] as usize;
-            self.hitbox.left_knee.index = bone_index[12] as usize;
-            self.hitbox.left_foot.index = bone_index[13] as usize;
-            self.hitbox.right_thigh.index = bone_index[15] as usize;
-            self.hitbox.right_knee.index = bone_index[16] as usize;
-            self.hitbox.right_foot.index = bone_index[17] as usize;
-        } else {
-            self.hitbox.head.index = bone_index[0] as usize;
-            self.hitbox.neck.index = bone_index[1] as usize;
-            self.hitbox.upper_chest.index = bone_index[2] as usize;
-            self.hitbox.lower_chest.index = bone_index[3] as usize;
-            self.hitbox.stomach.index = bone_index[4] as usize;
-            self.hitbox.hip.index = bone_index[5] as usize;
-            self.hitbox.left_shoulder.index = bone_index[6] as usize;
-            self.hitbox.left_elbow.index = bone_index[7] as usize;
-            self.hitbox.left_hand.index = bone_index[8] as usize;
-            self.hitbox.right_shoulder.index = bone_index[9] as usize;
-            self.hitbox.right_elbow.index = bone_index[10] as usize;
-            self.hitbox.right_hand.index = bone_index[11] as usize;
-            self.hitbox.left_thigh.index = bone_index[12] as usize;
-            self.hitbox.left_knee.index = bone_index[13] as usize;
-            self.hitbox.left_foot.index = bone_index[14] as usize;
-            self.hitbox.right_thigh.index = bone_index[16] as usize;
-            self.hitbox.right_knee.index = bone_index[17] as usize;
-            self.hitbox.right_foot.index = bone_index[18] as usize;
-        };
-
-        // Ok(())
-    }
-
-    pub fn update_bone_position(&mut self, vp: VmmProcess) {
-        let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-        self.position = Pos3::from_array(vec_abs_origin);
-        // float: 4 * matrix: 12 * bone: 200
-        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 20);
-        // println!("{:?}", data.hex_dump());
-
-        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 20);
-
-        for chunk in data.chunks_exact(4) {
-            let mut array: [u8; 4] = [0; 4];
-            array.copy_from_slice(chunk);
-            let array = f32::from_le_bytes(array);
-            f32_num.push(array);
-        }
-
-        let matrix: Vec<[[f32; 4]; 3]> = f32_num
-            .chunks_exact(4)// [f32; 4]
-            .map(|chunk| {
-                let mut array: [f32; 4] = [0.0; 4]; // init
-                array.copy_from_slice(chunk);
-                array
-            })
-            .collect::<Vec<[f32; 4]>>()
-            .chunks_exact(3) // [[f32; 4]; 3]
-            .map(|chunk| {
-                let mut matrix: [[f32; 4]; 3] = [[0.0; 4]; 3]; // init
-                for (i, item) in chunk.iter().enumerate() {
-                    matrix[i] = *item;
-                }
-                matrix
-            })
-            .collect();
-
-        // println!("name -> {}", self.status.name);
-        self.hitbox.head.position = Pos3 {
-            x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.head.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.head.index][2][3] + vec_abs_origin[2],
-        };
-    }
-}
-
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum DataError {
     BoneError,
     #[default]
@@ -464,9 +213,7 @@ pub enum DataError {
 }
 
 impl Player {
-    pub fn update_pointer(&mut self, vp: VmmProcess) {
-        self.bone_pointer = read_u64(vp, self.pointer + BONE);
-    }
+
 
     /// ptr -> painter
     pub fn get_bones_position(&self) -> Vec<Pos3> {
@@ -617,208 +364,6 @@ impl Player {
         ptr.circle_stroke(nearest_bone, 4.0, Stroke::new(2.0, Color32::GREEN));
     }
 
-    pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
-        self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
-        self.position_2d = world_to_screen(matrix, self.position, screen_size);
-    }
-
-    pub fn update_distance(&mut self, vp: VmmProcess, pos: &Pos3) {
-        self.distance = distance3d(&self.position, pos);
-        self.distance_2d = distance2d(&self.position.to_pos2(), &pos.to_pos2())
-    }
-    pub fn update_bone_index(&mut self, vp: VmmProcess) {
-        let model_pointer = read_u64(vp, self.pointer + STUDIOHDR);
-        let studio_hdr = read_u64(vp, model_pointer + 0x8);
-
-        let hitbox_cache = read_u16(vp, studio_hdr + 0x34) as u64;
-        let hitbox_array = studio_hdr + ((hitbox_cache & 0xFFFE) << (4 * (hitbox_cache & 1)));
-
-        let index_cache = read_u16(vp, hitbox_array + 0x4);
-        let hitbox_index = (index_cache & 0xFFFE) << (4 * (index_cache & 1));
-        // 19 is bone amount we need
-        let data = read_mem(vp, hitbox_index as u64 + hitbox_array, 20 * 0x20);
-        // println!("{:?}", data.hex_dump());
-        let bone_index: Vec<u16> = data.chunks_exact(0x20)
-            .map(|chunk| u16::from_le_bytes(chunk[..2].try_into().unwrap()))
-            .collect();
-
-        // println!("{} -> {:?}", self.pointer, bone_index);
-        /*        if bone_index.iter().any(|&x| x > 240) {
-                    Err(DataError::BoneError)
-                };*/
-
-        if self.status.character == Character::Bloodhound {
-            self.hitbox.head.index = bone_index[0] as usize;
-            self.hitbox.neck.index = bone_index[1] as usize;
-            self.hitbox.upper_chest.index = bone_index[2] as usize;
-            self.hitbox.lower_chest.index = bone_index[3] as usize;
-            self.hitbox.stomach.index = bone_index[4] as usize;
-            self.hitbox.hip.index = bone_index[5] as usize;
-            self.hitbox.left_shoulder.index = bone_index[6] as usize;
-            self.hitbox.left_elbow.index = bone_index[7] as usize;
-            self.hitbox.left_hand.index = bone_index[19] as usize;
-            self.hitbox.right_shoulder.index = bone_index[8] as usize;
-            self.hitbox.right_elbow.index = bone_index[9] as usize;
-            self.hitbox.right_hand.index = bone_index[10] as usize;
-            self.hitbox.left_thigh.index = bone_index[11] as usize;
-            self.hitbox.left_knee.index = bone_index[12] as usize;
-            self.hitbox.left_foot.index = bone_index[13] as usize;
-            self.hitbox.right_thigh.index = bone_index[15] as usize;
-            self.hitbox.right_knee.index = bone_index[16] as usize;
-            self.hitbox.right_foot.index = bone_index[17] as usize;
-        } else {
-            self.hitbox.head.index = bone_index[0] as usize;
-            self.hitbox.neck.index = bone_index[1] as usize;
-            self.hitbox.upper_chest.index = bone_index[2] as usize;
-            self.hitbox.lower_chest.index = bone_index[3] as usize;
-            self.hitbox.stomach.index = bone_index[4] as usize;
-            self.hitbox.hip.index = bone_index[5] as usize;
-            self.hitbox.left_shoulder.index = bone_index[6] as usize;
-            self.hitbox.left_elbow.index = bone_index[7] as usize;
-            self.hitbox.left_hand.index = bone_index[8] as usize;
-            self.hitbox.right_shoulder.index = bone_index[9] as usize;
-            self.hitbox.right_elbow.index = bone_index[10] as usize;
-            self.hitbox.right_hand.index = bone_index[11] as usize;
-            self.hitbox.left_thigh.index = bone_index[12] as usize;
-            self.hitbox.left_knee.index = bone_index[13] as usize;
-            self.hitbox.left_foot.index = bone_index[14] as usize;
-            self.hitbox.right_thigh.index = bone_index[16] as usize;
-            self.hitbox.right_knee.index = bone_index[17] as usize;
-            self.hitbox.right_foot.index = bone_index[18] as usize;
-        };
-
-        // Ok(())
-    }
-
-    pub fn update_bone_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
-        let vec_abs_origin: [f32; 3] = read_f32_vec(vp, self.pointer + ABS_VECTORORIGIN, 3).as_slice().try_into().unwrap();
-
-        self.position = Pos3::from_array(vec_abs_origin);
-        self.position_2d = world_to_screen(matrix, self.position, screen_size);
-        // float: 4 * matrix: 12 * bone: 200
-        let data = read_mem(vp, self.bone_pointer, 4 * 12 * 240);
-        // println!("{:?}", data.hex_dump());
-
-        let mut f32_num: Vec<f32> = Vec::with_capacity(12 * 240);
-
-        for chunk in data.chunks_exact(4) {
-            let mut array: [u8; 4] = [0; 4];
-            array.copy_from_slice(chunk);
-            let array = f32::from_le_bytes(array);
-            f32_num.push(array);
-        }
-
-        let matrix: Vec<[[f32; 4]; 3]> = f32_num
-            .chunks_exact(4)// [f32; 4]
-            .map(|chunk| {
-                let mut array: [f32; 4] = [0.0; 4]; // init
-                array.copy_from_slice(chunk);
-                array
-            })
-            .collect::<Vec<[f32; 4]>>()
-            .chunks_exact(3) // [[f32; 4]; 3]
-            .map(|chunk| {
-                let mut matrix: [[f32; 4]; 3] = [[0.0; 4]; 3]; // init
-                for (i, item) in chunk.iter().enumerate() {
-                    matrix[i] = *item;
-                }
-                matrix
-            })
-            .collect();
-        if self.hitbox.head.index > 240 { return; }
-        // println!("name -> {}", self.status.name);
-        self.hitbox.head.position = Pos3 {
-            x: matrix[self.hitbox.head.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.head.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.head.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.neck.position = Pos3 {
-            x: matrix[self.hitbox.neck.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.neck.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.neck.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.upper_chest.position = Pos3 {
-            x: matrix[self.hitbox.upper_chest.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.upper_chest.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.upper_chest.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.lower_chest.position = Pos3 {
-            x: matrix[self.hitbox.lower_chest.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.lower_chest.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.lower_chest.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.stomach.position = Pos3 {
-            x: matrix[self.hitbox.stomach.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.stomach.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.stomach.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.hip.position = Pos3 {
-            x: matrix[self.hitbox.hip.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.hip.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.hip.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_shoulder.position = Pos3 {
-            x: matrix[self.hitbox.left_shoulder.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_shoulder.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_shoulder.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_elbow.position = Pos3 {
-            x: matrix[self.hitbox.left_elbow.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_elbow.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_elbow.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_hand.position = Pos3 {
-            x: matrix[self.hitbox.left_hand.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_hand.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_hand.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_shoulder.position = Pos3 {
-            x: matrix[self.hitbox.right_shoulder.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_shoulder.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_shoulder.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_elbow.position = Pos3 {
-            x: matrix[self.hitbox.right_elbow.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_elbow.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_elbow.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_hand.position = Pos3 {
-            x: matrix[self.hitbox.right_hand.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_hand.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_hand.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_thigh.position = Pos3 {
-            x: matrix[self.hitbox.left_thigh.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_thigh.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_thigh.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_knee.position = Pos3 {
-            x: matrix[self.hitbox.left_knee.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_knee.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_knee.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.left_foot.position = Pos3 {
-            x: matrix[self.hitbox.left_foot.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.left_foot.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.left_foot.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_thigh.position = Pos3 {
-            x: matrix[self.hitbox.right_thigh.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_thigh.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_thigh.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_knee.position = Pos3 {
-            x: matrix[self.hitbox.right_knee.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_knee.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_knee.index][2][3] + vec_abs_origin[2],
-        };
-        self.hitbox.right_foot.position = Pos3 {
-            x: matrix[self.hitbox.right_foot.index][0][3] + vec_abs_origin[0],
-            y: matrix[self.hitbox.right_foot.index][1][3] + vec_abs_origin[1],
-            z: matrix[self.hitbox.right_foot.index][2][3] + vec_abs_origin[2],
-        };
-    }
-
     pub fn update_bone_position_2d(&mut self, matrix: [[f32; 4]; 4], screen_size: Pos2) {
         let mut bones = [
             &mut self.hitbox.head,
@@ -872,14 +417,6 @@ impl Player {
     }
 }
 
-pub fn get_button_state(mut button: i32, vp: VmmProcess, base: u64) -> i32 {
-    button = button + 1;
-    let a0 = read_i32(vp, base + INPUT_SYSTEM + ((button >> 5) * 4) as u64 + 0xb0);
-
-    // println!("data -> {:?}", read_mem(vp, base + INPUT_SYSTEM + 0xb0 + ((button >> 5) * 4) as u64, 0x30).hex_dump());
-    // println!("addr {button} -> {:x} state -> {a0}", base + INPUT_SYSTEM + ((button >> 5) * 4) as u64 + 0xb0);
-    return (a0 >> (button & 31)) & 1;
-}
 
 
 #[named_constants]
@@ -1025,7 +562,7 @@ pub enum Item {
     BannerCrafting,
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Character {
     Table,
     Ash,
@@ -1252,31 +789,25 @@ pub enum InputSystem {
 }
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyData {
-    pub data: [i32; 255],
+    pub data: Vec<i32>,
 }
 
 impl Default for KeyData {
     fn default() -> Self {
-        KeyData { data: [0; 255] }
+        KeyData { data: Vec::with_capacity(255) }
     }
 }
 
 impl KeyData {
-    pub fn update_key_state(&mut self, vp: VmmProcess, base: u64) {
-        let data = ContinuingData::new(
-            read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
-        for i in 0..255 {
-            self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
-        }
-    }
+
     pub fn get_key_state(&self, value: u8) -> bool {
-        if self.data[(InputSystem(value).0 + 1) as usize] == 1 {
-            true
-        } else {
-            false
-        }
+        match self.data.get((InputSystem(value).0 + 1) as usize) {
+            Some(v) => { return *v == 1; }
+            None => {}
+        };
+        false
     }
 }
 
