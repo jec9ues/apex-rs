@@ -285,8 +285,8 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     let path = path.to_str().unwrap();
     println!("{:?}", path);
     let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
-    // let vmm = Vmm::new(path, &vmm_args).unwrap();
-    let vmm = Vmm::new("D:\\ovo-rs\\vmm.dll", &vmm_args).unwrap();
+    let vmm = Vmm::new(path, &vmm_args).unwrap();
+    // let vmm = Vmm::new("D://ovo-rs//vmm.dll", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");
@@ -327,7 +327,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
     // data.config.load();
     loop {
-
+        let vp = vp.clone();
         println!("{}", read_string(vp, base + LEVEL_NAME));
         if delay == u16::MAX {
             delay = u16::MIN;

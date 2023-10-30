@@ -181,7 +181,7 @@ impl Data {
             self.cache_pointer.cache_medium.retain(|&x| !null_pointer_remove.contains(&x));
 
             for &pointer_value in &null_pointer_remove {
-                self.cache_data.players.remove(&pointer_value);
+                // self.cache_data.players.remove(&pointer_value);
             }
 
             for pointer in now_list {
