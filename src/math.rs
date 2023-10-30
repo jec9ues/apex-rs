@@ -1,5 +1,5 @@
-use egui_backend::egui::Pos2;
-use crate::data::{LocalPlayer, Pos3};
+
+use crate::data::{LocalPlayer, Pos2, Pos3};
 
 pub fn world_to_screen(matrix: [[f32; 4]; 4], vector: Pos3, screen_size: Pos2) -> Pos2 {
     let transformed = [

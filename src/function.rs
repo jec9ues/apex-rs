@@ -8,24 +8,13 @@ use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::u8;
 use std::default::Default;
-use egui_backend::egui::Color32;
-use egui_backend::egui::CursorIcon::Text;
 use log::{debug, info};
 use memprocfs::*;
 use pretty_hex::*;
 
-use mouse_rs::{types::keys::Keys, Mouse};
-use rdev::{EventType, simulate};
 use crate::data::{Bone, GRENADE_PITCHES, launch2view, LocalPlayer, Pitch, Player, Pos3, WeaponX};
-use crate::egui_overlay::egui::Pos2;
 
 
-fn move_and_press() {
-    let mouse = Mouse::new();
-    mouse.move_to(500, 500).expect("Unable to move mouse");
-    mouse.press(&Keys::RIGHT).expect("Unable to press button");
-    mouse.release(&Keys::RIGHT).expect("Unable to release button");
-}
 
 
 
@@ -232,33 +221,6 @@ pub fn im_player_glow(vp: VmmProcess, addr: u64, x: u64, color: [f32; 3], check_
     }
 }
 
-pub const TEAM_COLOR: [Color32; 23] = [
-    Color32::DARK_GRAY,
-    Color32::from_rgb(20, 150, 0),
-    Color32::from_rgb(120, 50, 0),
-    Color32::from_rgb(20, 150, 50),
-    Color32::from_rgb(0, 50, 50),
-    Color32::LIGHT_GRAY,
-    Color32::BROWN,
-    Color32::DARK_RED,
-    Color32::RED,
-    Color32::from_rgb(200, 0, 0),
-    Color32::LIGHT_RED,
-    Color32::YELLOW,
-    Color32::LIGHT_YELLOW,
-    Color32::KHAKI,
-    Color32::DARK_GREEN,
-    Color32::GREEN,
-    Color32::from_rgb(0, 200, 0),
-    Color32::LIGHT_GREEN,
-    Color32::DARK_BLUE,
-    Color32::BLUE,
-    Color32::LIGHT_BLUE,
-    Color32::GOLD,
-    Color32::from_rgb(0, 0, 200),
-];
-
-
 
 pub fn get_client_class_name(vp: VmmProcess, ptr: u64) -> String {
     let client_networkable_vtable = read_u64(vp, ptr + 3 * 8);
@@ -306,18 +268,6 @@ pub fn weaponx_entity(vp: VmmProcess, addr: u64, base: u64) -> u8 {
     println!("ammo -> {:?}", ammo);
     println!("semi_auto -> {:?}", semi_auto);
     selected_slot
-}
-
-pub fn send(event_type: &EventType) {
-    let delay = Duration::from_millis(20);
-    match simulate(event_type) {
-        Ok(()) => (),
-        Err(SimulateError) => {
-            println!("We could not send {:?}", event_type);
-        }
-    }
-    // Let ths OS catchup (at least MacOS)
-    sleep(delay);
 }
 
 pub struct FpsCounter {

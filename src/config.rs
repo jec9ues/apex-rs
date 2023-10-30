@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 use std::{fs, mem};
 use std::time::Instant;
-use egui_backend::egui::Pos2;
 
 
-use rdev::Key;
 use serde::{Deserialize, Serialize};
-use crate::data::{Character, InputSystem};
+use crate::data::{Character, InputSystem, Pos2};
 use crate::function::FpsCounter;
 
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]

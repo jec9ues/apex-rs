@@ -1,16 +1,12 @@
 use std::collections::HashMap;
-use std::sync::Condvar;
-use egui_backend::egui::*;
-use egui_backend::egui::epaint::PathShape;
-use egui_window_glfw_passthrough::glfw::WindowEvent::Pos;
 use memprocfs::VmmProcess;
+use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
 use crate::mem::*;
 use crate::math::*;
-use crate::menu::dbg_player;
 
 pub enum Cache {
     High, // near position
@@ -20,7 +16,7 @@ pub enum Cache {
 }
 
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CachePtr {
     pub cache_high: Vec<u64>,
     pub cache_medium: Vec<u64>,
@@ -28,7 +24,7 @@ pub struct CachePtr {
     pub cache_static: Vec<u64>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CacheData {
     pub local_player: LocalPlayer,
     pub target: Player,
@@ -48,7 +44,7 @@ impl CacheData {
     }*/
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Data {
     pub base: u64,
     pub cache_pointer: CachePtr,
@@ -244,115 +240,6 @@ impl Data {
 
         self.cache_data.target.update_bone_position(vp, self.cache_data.local_player.view_matrix, self.config.screen.size);
         self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix, screen_size);
-    }
-/*    pub fn update_cache_high(&mut self, vp: VmmProcess) {
-
-        self.cache_data.local_player.status.update(vp, &self.cache_data.local_player.pointer);
-        self.cache_data.local_player.update_bone_position(vp);
-        self.cache_data.local_player.update_view_matrix(vp); // 500 µs
-        self.cache_data.local_player.update_angle(vp); // 500 µs
-
-
-        self.key.update_key_state(vp, self.base);
-        for pointer in &mut self.cache_pointer.cache_high {
-            if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                // player.status.update(vp, &player.pointer);
-                // player.status.update(vp, &player.pointer);
-
-                player.update_position(vp, self.cache_data.local_player.view_matrix);
-                player.update_distance(vp, &self.cache_data.local_player.position);
-                // if player.distance > 50.0 {continue}
-                // player.update_bone_index(vp);
-                // player.update_bone_position(vp);
-
-                self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
-            }
-        }
-        self.cache_data.target =  self.get_near_crosshair_player();
-    }
-    pub fn update_cache_medium(&mut self, vp: VmmProcess) {
-        for pointer in &mut self.cache_pointer.cache_medium {
-            if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                // player.status.update(vp, &player.pointer);
-                player.update_position(vp, self.cache_data.local_player.view_matrix);
-                player.update_distance(vp, &self.cache_data.local_player.position);
-                // player.update_bone_index(vp);
-                player.update_bone_position(vp);
-                player.status.update(vp, &player.pointer);
-
-                self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
-            }
-        }
-    }
-    pub fn update_cache_low(&mut self, vp: VmmProcess) {
-        for pointer in &mut self.cache_pointer.cache_low {
-            if let Some(player) = self.cache_data.players.get_mut(&pointer) {
-                // player.status.update(vp, &player.pointer);
-                player.update_position(vp, self.cache_data.local_player.view_matrix);
-                player.update_distance(vp, &self.cache_data.local_player.position);
-                // player.update_bone_index(vp);
-                player.update_bone_position(vp);
-                player.status.update(vp, &player.pointer);
-
-                self.cache_data.target.update_bone_position_2d(self.cache_data.local_player.view_matrix);
-            }
-        }
-    }
-    pub fn re_cache_pointer(&mut self, vp: VmmProcess) {
-        let mut high_remove = Vec::new();
-        let mut medium_remove = Vec::new();
-        let mut low_remove = Vec::new();
-        for pointer in &mut self.cache_pointer.cache_high {
-            if let Some(player) = self.cache_data.players.get(&pointer) {
-                if player.distance > 100.0 {
-                    self.cache_pointer.cache_low.push(player.pointer);
-                    high_remove.push(player.pointer);
-                }
-                else if player.status.dead > 0 {
-                    self.cache_pointer.cache_low.push(player.pointer);
-                    high_remove.push(player.pointer);
-                } else if player.status.knocked > 0 {
-                    self.cache_pointer.cache_medium.push(player.pointer);
-                    high_remove.push(player.pointer);
-                }
-            }
-        }
-
-        for pointer in &mut self.cache_pointer.cache_medium {
-            if let Some(player) = self.cache_data.players.get(&pointer) {
-                if player.distance < 100.0 && player.status.knocked == 0{
-                    self.cache_pointer.cache_high.push(player.pointer);
-                    medium_remove.push(player.pointer);
-                }
-            }
-        }
-
-        for pointer in &mut self.cache_pointer.cache_low {
-            if let Some(player) = self.cache_data.players.get(&pointer) {
-                // println!("distance -> {} dead -> {}", player.distance, player.status.dead);
-                if player.distance < 100.0 && player.status.dead == 0{
-                    self.cache_pointer.cache_high.push(player.pointer);
-                    low_remove.push(player.pointer);
-                }
-            }
-        }
-        for item in high_remove {
-            self.cache_pointer.cache_high.retain(|&x| x != item);
-        }
-        for item in medium_remove {
-            self.cache_pointer.cache_medium.retain(|&x| x != item);
-        }
-
-        for item in low_remove {
-            self.cache_pointer.cache_low.retain(|&x| x != item);
-        }
-
-    }*/
-    pub fn dbg_view(&self, ui: &mut Ui) {
-        for i in &self.cache_data.players {
-
-            dbg_player(i.1, ui);
-        }
     }
 
 }

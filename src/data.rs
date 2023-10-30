@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, format, Formatter};
-use egui_backend::egui::*;
 use log::*;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
@@ -11,9 +10,8 @@ use crate::math::*;
 use crate::mem::*;
 use named_constants::named_constants;
 use serde::{Deserialize, Serialize};
-use crate::convert_coordinates;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Player {
     pub index: u64,
     pub pointer: u64,
@@ -29,7 +27,7 @@ pub struct Player {
 }
 
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Hitbox {
     pub head: Bone,
     pub neck: Bone,
@@ -51,14 +49,14 @@ pub struct Hitbox {
     pub right_foot: Bone,
 }
 
-#[derive(Debug, Copy, Clone, Default)]
+#[derive(Debug, Copy, Clone, Default, Serialize, Deserialize)]
 pub struct Bone {
     pub index: usize,
     pub position: Pos3,
     pub position_2d: Pos2,
 }
 
-#[derive(Debug, Copy, Clone, Default, PartialEq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Pos3 {
     pub x: f32,
 
@@ -180,7 +178,7 @@ impl WeaponX {
 
 
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Status {
     pub dead: u16,
     pub knocked: u16,
@@ -285,7 +283,7 @@ impl Status {
 }
 
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LocalPlayer {
     pub pointer: u64,
     pub render_pointer: u64,
@@ -456,7 +454,7 @@ impl LocalPlayer {
     }
 }
 
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum DataError {
     BoneError,
     #[default]
@@ -498,124 +496,6 @@ impl Player {
         res
     }
 
-    pub fn position_esp(&self, ptr: Painter) {
-        ptr.circle_filled(self.position_2d, 3.0, TEAM_COLOR[self.status.team as usize]);
-        ptr.text(self.position_2d,
-                 Align2::CENTER_BOTTOM,
-                 format!("{:?}", self.status.name),
-                 FontId::default(),
-                 Color32::LIGHT_BLUE);
-        ptr.line_segment(
-            [Pos2 { x: self.position_2d.x + 20.0, y: self.position_2d.y + 10.0 },
-                Pos2 { x: self.position_2d.x + 20.0, y: self.position_2d.y + 10.0 - self.status.health as f32 / 3.0 }],
-            Stroke::new(4.0, Color32::GREEN),
-        );
-
-        ptr.line_segment(
-            [Pos2 { x: self.position_2d.x + 25.0, y: self.position_2d.y + 10.0 },
-                Pos2 { x: self.position_2d.x + 25.0, y: self.position_2d.y + 10.0 - self.status.shield as f32 / 3.0 }],
-            Stroke::new(4.0, Color32::BLUE),
-        );
-    }
-    pub fn map_esp(&self, ptr: Painter, pos0: Pos2, rate: [f32; 2]) {
-        let player_pos = convert_coordinates(
-            self.position.x,
-            self.position.y,
-            rate[0],
-            rate[1],
-        );
-        ptr.circle(Pos2 { x: pos0.x + player_pos.0, y: pos0.y + player_pos.1 },
-                   2.0, Color32::TRANSPARENT, Stroke::new(5.0, Color32::RED));
-    }
-    pub fn bone_esp(&self, ptr: Painter, distance: f32, color: Color32) {
-        if self.status.dead > 0 || self.distance > distance {
-            return;
-        };
-        // println!("bone esp -> {:?}", self.hitbox);
-        let mut body: Vec<Pos2> = Vec::new();
-        let mut leg: Vec<Pos2> = Vec::new();
-        let mut hand: Vec<Pos2> = Vec::new();
-        let bones = [
-            &self.hitbox.head.position_2d,
-            &self.hitbox.neck.position_2d,
-            &self.hitbox.upper_chest.position_2d,
-            &self.hitbox.lower_chest.position_2d,
-            &self.hitbox.stomach.position_2d,
-            &self.hitbox.hip.position_2d,
-        ];
-        let bones2 = [
-            &self.hitbox.left_hand.position_2d,
-            &self.hitbox.left_elbow.position_2d,
-            &self.hitbox.left_shoulder.position_2d,
-            &self.hitbox.neck.position_2d,
-            &self.hitbox.right_shoulder.position_2d,
-            &self.hitbox.right_elbow.position_2d,
-            &self.hitbox.right_hand.position_2d,
-        ];
-
-        let bones3 = [
-            &self.hitbox.left_foot.position_2d,
-            &self.hitbox.left_knee.position_2d,
-            &self.hitbox.left_thigh.position_2d,
-            &self.hitbox.hip.position_2d,
-            &self.hitbox.right_thigh.position_2d,
-            &self.hitbox.right_knee.position_2d,
-            &self.hitbox.right_foot.position_2d,
-        ];
-
-        for bone in bones.iter() {
-            body.push(**bone);
-        };
-        for bone in bones2.iter() {
-            hand.push(**bone);
-        };
-        for bone in bones3.iter() {
-            leg.push(**bone);
-        };
-
-
-        ptr.add(
-            Shape::line(body,
-                        Stroke::new(2.0, color)));
-        ptr.add(
-            Shape::line(hand,
-                        Stroke::new(2.0, color)));
-        ptr.add(
-            Shape::line(leg,
-                        Stroke::new(2.0, color)));
-        /*        ptr.text(self.hitbox.head.position_2d,
-                         Align2::CENTER_BOTTOM,
-                         self.status.skin.to_string(),
-                         FontId::default(),
-                         Color32::WHITE);
-                ptr.text(self.hitbox.hip.position_2d,
-                         Align2::CENTER_BOTTOM,
-                         format!("{:?}", self.status.character),
-                         FontId::default(),
-                         Color32::LIGHT_RED);*/
-        /*        ptr.text(self.hitbox.lower_chest.position_2d,
-                         Align2::CENTER_BOTTOM,
-                         format!("{:?}", self.status.last_visible_time),
-                         FontId::default(),
-                         Color32::BLUE);
-
-                ptr.text(self.hitbox.left_elbow.position_2d,
-                         Align2::CENTER_BOTTOM,
-                         format!("{:?}", self.status.last_crosshair_target_time),
-                         FontId::default(),
-                         Color32::RED);*/
-    }
-    pub fn target_line(&self, ptr: Painter, center: Pos2) {
-        if self.position_2d == Pos2::ZERO {
-            return;
-        }
-        let nearest_bone = self.get_nearest_bone(center).position_2d;
-        ptr.line_segment(
-            [nearest_bone, center],
-            Stroke::new(2.0, Color32::RED));
-
-        ptr.circle_stroke(nearest_bone, 4.0, Stroke::new(2.0, Color32::GREEN));
-    }
 
     pub fn update_position(&mut self, vp: VmmProcess, matrix: [[f32; 4]; 4], screen_size: Pos2) {
         self.position = Pos3::from_array(read_f32_vec(vp, self.pointer + LOCAL_ORIGIN, 3).as_slice().try_into().unwrap());
@@ -1025,7 +905,7 @@ pub enum Item {
     BannerCrafting,
 }
 
-#[derive(Default, Copy, Clone, Debug, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum Character {
     Table,
     Ash,
@@ -1252,14 +1132,15 @@ pub enum InputSystem {
 }
 
 
-#[derive(Debug, Copy, Clone)]
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyData {
-    pub data: [i32; 255],
+    pub data: Vec<i32>,
 }
 
 impl Default for KeyData {
     fn default() -> Self {
-        KeyData { data: [0; 255] }
+        KeyData { data: Vec::with_capacity(255) }
     }
 }
 
@@ -1268,15 +1149,16 @@ impl KeyData {
         let data = ContinuingData::new(
             read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
         for i in 0..255 {
-            self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
+            let v = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1;
+            self.data.push(v);
         }
     }
     pub fn get_key_state(&self, value: u8) -> bool {
-        if self.data[(InputSystem(value).0 + 1) as usize] == 1 {
-            true
-        } else {
-            false
-        }
+        match self.data.get((InputSystem(value).0 + 1) as usize) {
+            Some(v) => { return *v == 1; }
+            None => {}
+        };
+        false
     }
 }
 
@@ -1482,3 +1364,199 @@ pub static GRENADIER_ARC_PITCHES: [Pitch; 19] = [
     Pitch { view: 1.3965, launch: 1.3976 },
     Pitch { view: 1.5533, launch: 1.5534 },
 ];
+
+
+use std::ops::{Add, AddAssign, Sub, SubAssign};
+
+use crate::*;
+
+/// A position on screen.
+///
+/// Normally given in points (logical pixels).
+///
+/// Mathematically this is known as a "point", but the term position was chosen so not to
+/// conflict with the unit (one point = X physical pixels).
+#[repr(C)]
+#[derive(Clone, Copy, Default, PartialEq)]
+#[derive(Deserialize, Serialize)]
+pub struct Pos2 {
+    /// How far to the right.
+    pub x: f32,
+
+    /// How far down.
+    pub y: f32,
+    // implicit w = 1
+}
+
+/// `pos2(x, y) == Pos2::new(x, y)`
+#[inline(always)]
+pub const fn pos2(x: f32, y: f32) -> Pos2 {
+    Pos2 { x, y }
+}
+
+// ----------------------------------------------------------------------------
+// Compatibility and convenience conversions to and from [f32; 2]:
+
+impl From<[f32; 2]> for Pos2 {
+    #[inline(always)]
+    fn from(v: [f32; 2]) -> Self {
+        Self { x: v[0], y: v[1] }
+    }
+}
+
+impl From<&[f32; 2]> for Pos2 {
+    #[inline(always)]
+    fn from(v: &[f32; 2]) -> Self {
+        Self { x: v[0], y: v[1] }
+    }
+}
+
+impl From<Pos2> for [f32; 2] {
+    #[inline(always)]
+    fn from(v: Pos2) -> Self {
+        [v.x, v.y]
+    }
+}
+
+impl From<&Pos2> for [f32; 2] {
+    #[inline(always)]
+    fn from(v: &Pos2) -> Self {
+        [v.x, v.y]
+    }
+}
+
+// ----------------------------------------------------------------------------
+// Compatibility and convenience conversions to and from (f32, f32):
+
+impl From<(f32, f32)> for Pos2 {
+    #[inline(always)]
+    fn from(v: (f32, f32)) -> Self {
+        Self { x: v.0, y: v.1 }
+    }
+}
+
+impl From<&(f32, f32)> for Pos2 {
+    #[inline(always)]
+    fn from(v: &(f32, f32)) -> Self {
+        Self { x: v.0, y: v.1 }
+    }
+}
+
+impl From<Pos2> for (f32, f32) {
+    #[inline(always)]
+    fn from(v: Pos2) -> Self {
+        (v.x, v.y)
+    }
+}
+
+impl From<&Pos2> for (f32, f32) {
+    #[inline(always)]
+    fn from(v: &Pos2) -> Self {
+        (v.x, v.y)
+    }
+}
+
+impl Pos2 {
+    /// The zero position, the origin.
+    /// The top left corner in a GUI.
+    /// Same as `Pos2::default()`.
+    pub const ZERO: Self = Self { x: 0.0, y: 0.0 };
+
+    #[inline(always)]
+    pub const fn new(x: f32, y: f32) -> Self {
+        Self { x, y }
+    }
+
+    /// The vector from origin to this position.
+    /// `p.to_vec2()` is equivalent to `p - Pos2::default()`.
+
+
+    #[inline]
+    pub fn distance(self, other: Self) -> f32 {
+        ( Pos2 { x: self.x - other.x, y: self.y - other.y } ).length()
+    }
+
+
+    #[inline(always)]
+    pub fn length(self) -> f32 {
+        self.x.hypot(self.y)
+    }
+    #[inline(always)]
+    pub fn floor(self) -> Self {
+        pos2(self.x.floor(), self.y.floor())
+    }
+
+    #[inline(always)]
+    pub fn round(self) -> Self {
+        pos2(self.x.round(), self.y.round())
+    }
+
+    #[inline(always)]
+    pub fn ceil(self) -> Self {
+        pos2(self.x.ceil(), self.y.ceil())
+    }
+
+    /// True if all members are also finite.
+    #[inline(always)]
+    pub fn is_finite(self) -> bool {
+        self.x.is_finite() && self.y.is_finite()
+    }
+
+    /// True if any member is NaN.
+    #[inline(always)]
+    pub fn any_nan(self) -> bool {
+        self.x.is_nan() || self.y.is_nan()
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn min(self, other: Self) -> Self {
+        pos2(self.x.min(other.x), self.y.min(other.y))
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn max(self, other: Self) -> Self {
+        pos2(self.x.max(other.x), self.y.max(other.y))
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn clamp(self, min: Self, max: Self) -> Self {
+        Self {
+            x: self.x.clamp(min.x, max.x),
+            y: self.y.clamp(min.y, max.y),
+        }
+    }
+
+}
+
+impl std::ops::Index<usize> for Pos2 {
+    type Output = f32;
+
+    #[inline(always)]
+    fn index(&self, index: usize) -> &f32 {
+        match index {
+            0 => &self.x,
+            1 => &self.y,
+            _ => panic!("Pos2 index out of bounds: {}", index),
+        }
+    }
+}
+
+impl std::ops::IndexMut<usize> for Pos2 {
+    #[inline(always)]
+    fn index_mut(&mut self, index: usize) -> &mut f32 {
+        match index {
+            0 => &mut self.x,
+            1 => &mut self.y,
+            _ => panic!("Pos2 index out of bounds: {}", index),
+        }
+    }
+}
+
+impl std::fmt::Debug for Pos2 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "[{:.1} {:.1}]", self.x, self.y)
+    }
+}

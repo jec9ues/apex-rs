@@ -8,7 +8,6 @@ use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::*;
-use egui_backend::egui::Pos2;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
 use crate::cache::*;
@@ -16,10 +15,7 @@ use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
 use crate::math::*;
-use rdev::*;
-use rdev::EventType::KeyPress;
 use crate::config::{Config, ScreenConfig};
-use crate::kmbox_bpro::main_kmbox_bpro;
 
 pub fn read_mem(vp: VmmProcess, addr: u64, size: usize) -> Vec<u8> {
     match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
@@ -285,8 +281,11 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     let path = path.to_str().unwrap();
     println!("{:?}", path);
     let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
-    // let vmm = Vmm::new(path, &vmm_args).unwrap();
-    let vmm = Vmm::new("D:\\ovo-rs\\vmm.dll", &vmm_args).unwrap();
+    let vmm = Vmm::new(path, &vmm_args).unwrap();
+    // let vmm = Vmm::new("D://ovo-rs//vmm.dll", &vmm_args).unwrap();
+
+    // let vmm_args = ["-device", "qemu://shm=qemu-win10.mem,qmp=/tmp/qmp-win10.sock"].to_vec();
+    // let vmm = Vmm::new("/mnt/test/vmm.so", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");
@@ -464,8 +463,6 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                     if data.config.aim.aim_assist.kmbox {
                         let rt = tokio::runtime::Runtime::new().unwrap();
                         // 在 Tokio 运行时中执行异步函数
-                        rt.block_on(main_kmbox_bpro(pitch_delta / pitch_delta_smooth, angle_delta / angle_delta_smooth, data.config.aim.aim_assist.pitch_rate, data.config.aim.aim_assist.yaw_rate)).expect("TODO: panic message");
-
                     } else {
                         data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
                     }
@@ -478,8 +475,6 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                             // data.cache_data.local_player.set_pitch(vp, new_pitch);
                             if data.cache_data.target.hitbox_check(data.config.screen.center(), data.config.aim.trigger_bot.hitbox_size) {
                                 sleep(Duration::from_micros(data.config.aim.trigger_bot.delay));
-                                send(&EventType::ButtonPress(Button::Left));
-                                send(&EventType::ButtonRelease(Button::Left));
                             }
                         }
                     }
@@ -487,16 +482,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
             }
         }
 
-/*        data.cache_data.local_player.set_pitch(vp, pitch);
-        let angle_delta_abs = angle_delta.abs();
-        println!("slot -> {}", weaponx_entity(vp, data.cache_data.local_player.pointer, base));
-        last_time = data.cache_data.target.status.last_crosshair_target_time;
-        println!("calculate pitch -> {}, yaw -> {}", angle_delta, data.config.aim.aim_assist.yaw_smooth);
-        println!("visible -> {}", data.cache_data.target.status.visible());
-        last_vis = data.cache_data.target.status.last_visible_time;
-        println!("button state -> {}", get_button_state(107, vp, base));
-        println!("pitch -> {}, yaw -> {}", data.cache_data.local_player.pitch, data.cache_data.local_player.yaw);
-        println!("calculate pitch -> {}, yaw -> {}", pitch, yaw);*/
+
 
 
         let end_time = Instant::now();
