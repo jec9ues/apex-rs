@@ -286,7 +286,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     println!("{:?}", path);
     let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
     let vmm = Vmm::new(path, &vmm_args).unwrap();
-    // let vmm = Vmm::new("D://ovo-rs//vmm.dll", &vmm_args).unwrap();
+    // let vmm = Vmm::new("D:\\ovo-rs\\vmm.dll", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");
@@ -367,7 +367,8 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
         data.update_status(vp);
-        data.update_cache(vp);
+
+        // data.update_cache(vp);
         // let raw = read_mem(vp, data.base + NST_WEAPON_NAMES, 0x10);
         // println!("raw -> {:?}", raw.hex_dump());
         // let mut wp = WeaponX::default();
@@ -438,8 +439,8 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         // println!("{:?}", data.cache_data.target);
         if data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
             let target_bone = data.cache_data.target.get_nearest_bone(data.config.screen.center());
-            let pitch = calculate_desired_pitch(data.cache_data.local_player.camera_position, target_bone.position);
             let yaw = calculate_desired_yaw(data.cache_data.local_player.camera_position, target_bone.position);
+            let pitch = calculate_desired_pitch(data.cache_data.local_player.camera_position, target_bone.position);
             // let angle_delta = calculate_angle_delta(data.cache_data.local_player.yaw, yaw);
             // let pitch_delta = calculate_pitch_angle_delta(data.cache_data.local_player.pitch, pitch);
 
@@ -456,7 +457,9 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
             let new_yaw = flip_yaw_if_needed(data.cache_data.local_player.yaw + angle_delta / angle_delta_smooth);
             let new_pitch = data.cache_data.local_player.pitch + pitch_delta / pitch_delta_smooth;
-            // println!("calculate pitch -> {}, yaw -> {}", new_pitch, new_yaw);
+            println!("pitch -> {}, yaw -> {}", pitch, yaw);
+            println!("delta pitch -> {}, yaw -> {}", pitch_delta, angle_delta);
+            println!("calculate pitch -> {}, yaw -> {}", new_pitch, new_yaw);
             if data.cache_data.target.status.visible() {
                 if data.key.get_key_state(data.config.aim.aim_assist.key) || data.key.get_key_state(data.config.aim.aim_assist.key2) {
                     // data.cache_data.local_player.set_yaw(vp, new_yaw);
