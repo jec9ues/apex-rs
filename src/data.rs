@@ -5,7 +5,7 @@ use egui_backend::egui::*;
 use log::*;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
-use crate::constants::offsets::*;
+use std::mem::size_of;
 use crate::function::*;
 use crate::math::*;
 use named_constants::named_constants;
@@ -358,9 +358,9 @@ impl Player {
         }
         let nearest_bone = self.get_nearest_bone(center).position_2d;
         ptr.line_segment(
-            [nearest_bone, center],
+            [center, nearest_bone],
             Stroke::new(2.0, Color32::RED));
-
+        println!("center -> {:?}", center);
         ptr.circle_stroke(nearest_bone, 4.0, Stroke::new(2.0, Color32::GREEN));
     }
 
@@ -791,23 +791,20 @@ pub enum InputSystem {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyData {
-    pub data: Vec<i32>,
+    pub data: ContinuingData,
 }
 
 impl Default for KeyData {
     fn default() -> Self {
-        KeyData { data: Vec::with_capacity(255) }
+        KeyData { data: ContinuingData::new(Vec::new()) }
     }
 }
 
 impl KeyData {
 
-    pub fn get_key_state(&self, value: u8) -> bool {
-        match self.data.get((InputSystem(value).0 + 1) as usize) {
-            Some(v) => { return *v == 1; }
-            None => {}
-        };
-        false
+    pub fn get_key_state(&self, key: u8) -> bool {
+        let value = (InputSystem(key).0 + 1);
+        (self.data.read_i32(((value >> 5) * 4) as u64) >> (value & 31)) & 1 == 1
     }
 }
 
@@ -1013,3 +1010,110 @@ pub static GRENADIER_ARC_PITCHES: [Pitch; 19] = [
     Pitch { view: 1.3965, launch: 1.3976 },
     Pitch { view: 1.5533, launch: 1.5534 },
 ];
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ContinuingData {
+    pub value: Vec<u8>,
+}
+impl ContinuingData {
+    pub fn new(value: Vec<u8>) -> Self {
+        ContinuingData { value }
+    }
+
+    pub fn read_u8(&self,  addr: usize) -> u8 {
+        const SIZE: usize = size_of::<u8>();
+
+        let slice = &self.value[addr..(addr + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u8::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_u16(&self, addr: u64) -> u16 {
+        const SIZE: usize = size_of::<u16>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u16::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_u32(&self, addr: u64) -> u32 {
+        const SIZE: usize = size_of::<u32>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u32::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+
+    pub fn read_i32(&self, addr: u64) -> i32 {
+        const SIZE: usize = size_of::<i32>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = i32::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_u64(&self, addr: u64) -> u64 {
+        const SIZE: usize = size_of::<u64>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = u64::from_le_bytes(bytes);
+        // println!("data: {:?} res: {}", data_read, res);
+        res
+    }
+    pub fn read_f32(&self, addr: u64) -> f32 {
+        const SIZE: usize = size_of::<f32>();
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        let res = f32::from_le_bytes(bytes);
+
+        res
+    }
+
+
+
+    pub fn read_f32_vec(&self, addr: u64, amount: usize) -> Vec<f32> {
+        const SIZE: usize = size_of::<f32>();
+
+        let slice = &self.value[addr as usize..amount * (addr as usize + SIZE)];
+
+        let mut f32_values: Vec<f32> = Vec::with_capacity(amount);
+
+        for chunk in slice.chunks_exact(SIZE) {
+            let mut array: [u8; SIZE] = [0; SIZE];
+            array.copy_from_slice(chunk);
+            let f32_value = f32::from_le_bytes(array);
+            f32_values.push(f32_value);
+        }
+
+        f32_values
+    }
+
+    pub fn read_string(&self, addr: u64) -> String {
+        const SIZE: usize = 32; // 假设最大字符串长度为 32，可以根据实际情况调整
+
+        let slice = &self.value[addr as usize..(addr as usize + SIZE)];
+        let bytes: [u8; SIZE] = slice.try_into().unwrap();
+
+        {
+            // 如果没有找到零字节，使用整个数据
+            match String::from_utf8(Vec::from(slice)) {
+                Ok(s) => s,
+                Err(_) => String::new(),
+            }
+        }
+    }
+}
+

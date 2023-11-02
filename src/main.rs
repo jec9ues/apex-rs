@@ -1,5 +1,4 @@
 mod egui_overlay;
-pub mod constants;
 pub mod function;
 pub mod math;
 pub mod data;
@@ -82,9 +81,13 @@ fn main() {
     let (data_sender, data_receiver) = bounded::<Data>(1);
 
     thread::spawn( move || {
-        recv_main(data_sender.clone(), config_receiver.clone())
-
-
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(
+            recv_main(
+                data_sender.clone(),
+                config_receiver.clone()
+            )
+        );
     });
 
 
@@ -92,10 +95,11 @@ fn main() {
     egui_overlay::start(Menu {
         fps: FpsCounter::new(),
         data: Data::default(),
-        data_recv: data_receiver,
+        data_receiver,
+        config_sender,
         texture: None,
         menu_config: MenuConfig::default(),
-        config_sender,
+
     });
 }
 
@@ -104,7 +108,7 @@ pub struct Menu {
     pub fps: FpsCounter,
 
     pub data: Data,
-    pub data_recv: Receiver<Data>,
+    pub data_receiver: Receiver<Data>,
     pub texture: Option<TextureHandle>,
     pub menu_config: MenuConfig,
     pub config_sender: Sender<Config>,
@@ -132,8 +136,12 @@ impl EguiOverlay for Menu {
         // let mut da: Data = Data::default();
         let overlay = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("overlay")), Rect::EVERYTHING);
 
+        match self.config_sender.try_send(self.menu_config.config) {
+            Ok(_) => {}
+            Err(_) => {}
+        }
 
-        match self.data_recv.try_recv() {
+        match self.data_receiver.try_recv() {
             Ok(data) => {
                 // println!("Received message from thread {:?}", data);
                 self.data = data;
@@ -288,10 +296,7 @@ impl EguiOverlay for Menu {
         });
 
 
-        match self.config_sender.try_send(self.menu_config.config) {
-            Ok(_) => {}
-            Err(_) => {}
-        }
+
 
         if egui_context.wants_pointer_input() || egui_context.wants_keyboard_input() {
             glfw_backend.window.set_mouse_passthrough(false);

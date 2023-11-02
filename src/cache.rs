@@ -6,7 +6,6 @@ use egui_window_glfw_passthrough::glfw::WindowEvent::Pos;
 use memprocfs::VmmProcess;
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
-use crate::constants::offsets::*;
 use crate::data::*;
 use crate::function::*;
 use crate::math::*;
