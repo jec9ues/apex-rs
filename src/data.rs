@@ -205,7 +205,7 @@ pub struct Status {
 impl Status {
     /// addr -> entity pointer
     pub fn initialize(&mut self, vp: VmmProcess, addr: u64, base: u64, index: u64) {
-        let data = ContinuingData::new(read_mem(vp, addr, 0x4600));
+        let data = ContinuingData::new(read_mem(vp, addr, 0x4700));
         self.health = data.read_u16(HEALTH); // 0x036c
         self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
 
@@ -231,7 +231,7 @@ impl Status {
     }
 
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
-        let data = ContinuingData::new(read_mem(vp, *addr, 0x4600));
+        let data = ContinuingData::new(read_mem(vp, *addr, 0x4700));
         self.health = data.read_u16(HEALTH); // 0x036c
         self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
 
