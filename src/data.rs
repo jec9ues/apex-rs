@@ -1252,31 +1252,28 @@ pub enum InputSystem {
 }
 
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyData {
-    pub data: [i32; 255],
+    pub data: ContinuingData,
 }
 
 impl Default for KeyData {
     fn default() -> Self {
-        KeyData { data: [0; 255] }
+        KeyData { data: ContinuingData::new(Vec::new()) }
     }
 }
 
 impl KeyData {
     pub fn update_key_state(&mut self, vp: VmmProcess, base: u64) {
-        let data = ContinuingData::new(
-            read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
-        for i in 0..255 {
-            self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
-        }
+        self.data = ContinuingData::new(read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
+
+        // for i in 0..255 {
+        //     self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
+        // }
     }
-    pub fn get_key_state(&self, value: u8) -> bool {
-        if self.data[(InputSystem(value).0 + 1) as usize] == 1 {
-            true
-        } else {
-            false
-        }
+    pub fn get_key_state(&self, key: u8) -> bool {
+        let value = (InputSystem(key).0 + 1);
+        (self.data.read_i32(((value >> 5) * 4) as u64) >> (value & 31)) & 1 == 1
     }
 }
 

@@ -18,6 +18,7 @@ use crate::function::*;
 use crate::math::*;
 use rdev::*;
 use rdev::EventType::KeyPress;
+use serde::{Deserialize, Serialize};
 use crate::config::{Config, ScreenConfig};
 use crate::kmbox_bpro::main_kmbox_bpro;
 
@@ -162,7 +163,7 @@ pub fn write_f32_vec(vp: VmmProcess, addr:u64, value: Vec<f32>) {
         .collect())
 }
 
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContinuingData {
     pub value: Vec<u8>,
 }
