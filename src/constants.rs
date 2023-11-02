@@ -1,20 +1,20 @@
 pub mod offsets {
-    pub const CL_ENTITYLIST: u64 = 0x1e21418;
+    pub const CL_ENTITYLIST: u64 = 0x1d6b5d8;
     // [Miscellaneous] -> cl_entitylist
-    pub const LOCAL_PLAYER: u64 = 0x21d1758;
+    pub const LOCAL_PLAYER: u64 = 0x2119848;
     // LocalPlayer
-    pub const NAME_LIST: u64 = 0xc264a60;
+    pub const NAME_LIST: u64 = 0xc26e750;
     // [Miscellaneous] -> NameList
-    pub const VIEW_RENDER: u64 = 0x741f0a8;
+    pub const VIEW_RENDER: u64 = 0x73828a0;
     // ViewRender
     pub const VIEW_MATRIX: u64 = 0x11a350;
     // ViewMatrix
-    pub const INPUT_SYSTEM: u64 = 0x1772cc0;
-    pub const CAMERA_POSITION: u64 = 0x1e90;
+    pub const INPUT_SYSTEM: u64 = 0x170f080;
+    pub const CAMERA_POSITION: u64 = 0x1f00;
     //[Miscellaneous] -> CPlayer!camera_origin
-    pub const CAMERA_ANGLES: u64 = 0x1e9c;
+    pub const CAMERA_ANGLES: u64 = 0x1f0c;
     //[Miscellaneous] -> CPlayer!CAMERA_ANGLES=0x1e9c
-    pub const LEVEL_NAME: u64 = 0x16f51e0;
+    pub const LEVEL_NAME: u64 = 0x1690670;
     // [Miscellaneous] -> LevelName
     pub const GLOW_COLOR: u64 = 0x200;
     // [Miscellaneous] -> glow_color
@@ -36,14 +36,14 @@ pub mod offsets {
     // [RecvTable.DT_Player] m_iHealth
     pub const MAX_HEALTH: u64 = 0x04a8;
     // [RecvTable.DT_Player] m_iMaxHealth
-    pub const HELMET_TYPE: u64 = 0x45c0;
+    pub const HELMET_TYPE: u64 = 0x4630;
     // [RecvTable.DT_Player] m_helmetType=0x45c0
-    pub const ARMOR_TYPE: u64 = 0x45c4;
+    pub const ARMOR_TYPE: u64 = 0x4634;
     // [RecvTable.DT_Player] m_armorType=0x45c4
     pub const CURRENT_FRAMEMODEL_INDEX: u64 = 0x00d8;
     // [DataMap.C_BaseEntity] m_currentFrame.modelIndex=0x00d8
 
-    pub const LAST_VISIBLE_TIME: u64 = 0x19B0;
+    pub const LAST_VISIBLE_TIME: u64 = 0x19C0;
     //CPlayer!LAST_VISIBLE_TIME
     pub const SHIELD: u64 = 0x01a0;
     // [RecvTable.DT_TitanSoul] m_shieldHealth
@@ -51,10 +51,10 @@ pub mod offsets {
     // [RecvTable.DT_TitanSoul] m_shieldHealthMax
     pub const LIFE_STATE: u64 = 0x06c8;
     // [RecvTable.DT_Player] -> m_lifeState
-    pub const BLEED_OUT_STATE: u64 = 0x26a0;
+    pub const BLEED_OUT_STATE: u64 = 0x2710;
     // [RecvTable.DT_Player] -> m_bleedoutState
-    pub const PLATFORM_USER_ID: u64 = 0x2508;
-    // [RecvTable.DT_Player] -> m_platformUserId=0x2508
+    pub const PLATFORM_USER_ID: u64 = 0x2578;
+    // [RecvTable.DT_Player] -> m_platformUserId=0x2578
 
     pub const STUDIOHDR: u64 = 0x1020;
     //CBaseAnimating!m_pStudioHdr
@@ -66,25 +66,23 @@ pub mod offsets {
     // [DataMap.CBaseViewModel] -> m_vecAbsOrigin
     pub const SIGN_NAME: u64 = 0x04b0 + 0x9;
     // m_iSignifierName
-    pub const ITEM_ID: u64 = 0x1578;
+    pub const ITEM_ID: u64 = 0x1588;
     // m_customScriptInt
 
     // weapon
     pub const AMMO: u64 = 0x15a0;
     // [RecvTable.DT_WeaponX_LocalWeaponData] -> m_ammoInClip
-    pub const WEAPON: u64 = 0x1954;
+    pub const WEAPON: u64 = 0x1964;
     // m_latestPrimaryWeapons
-    pub const SELECTED_SLOT: u64 = 0x1964;
+    pub const SELECTED_SLOT: u64 = 0x1974;
     // m_latestNonOffhandWeapons
-    pub const NST_WEAPON_NAMES: u64 = 0x07420760;
+    pub const NST_WEAPON_NAMES: u64 = 0x073831c0;
     // WeaponNames=0x07420760
-    pub const WEAPON_NAME: u64 = 0x1584;
+    pub const WEAPON_NAME: u64 = 0x17a8;
     // [RecvTable.DT_WeaponX] -> m_weaponNameIndex
-    pub const PLAYER_DATA: u64 = 0x15f0;
+    pub const PLAYER_DATA: u64 = 0x1600;
     // [RecvTable.DT_WeaponX] m_playerData=0x15f0
-    pub const LAST_TOSSED_GRENADE: u64 = 0x16d8;
-    // [RecvTable.DT_WeaponX] m_lastTossedGrenade=0x16d8
-    pub const WEAPON_SETTING_BASE: u64 = 0x19c8;
+    pub const WEAPON_SETTING_BASE: u64 = 0x19e0;
     // [WeaponSettingsMeta] -> base
     pub const BULLET_SPEED: u64 = WEAPON_SETTING_BASE + 0x04d4;
     // CWeaponX!m_flProjectileSpeed [WeaponSettingsMeta]
@@ -94,21 +92,21 @@ pub mod offsets {
     // m_playerData + m_curZoomFOV
     pub const SEMI_AUTO: u64 = WEAPON_SETTING_BASE + 0x018c;
     // [WeaponSettingsMeta] is_semi_auto / m_isSemiAuto
-    pub const BITFIELD_FROM_PLAYER: u64 = 0x1724;
+    pub const BITFIELD_FROM_PLAYER: u64 = 0x1734;
     // m_modBitfieldFromPlayer=0x1724
-    pub const BITFIELD_INTERNAL: u64 = 0x1728;
+    pub const BITFIELD_INTERNAL: u64 = 0x1738;
     // m_modBitfieldInternal=0x1728
-    pub const BITFIELD_CURRENT: u64 = 0x172c;
+    pub const BITFIELD_CURRENT: u64 = 0x173c;
     // m_modBitfieldCurrent=0x172c
-    pub const BITFIELD_DISABLED: u64 = 0x1730;
+    pub const BITFIELD_DISABLED: u64 = 0x1740;
     // m_modBitfieldDisabled=0x1730
 
-    pub const OFFSET_HIGHLIGHTSETTINGS: u64 = 0xB5F7620;
+    pub const OFFSET_HIGHLIGHTSETTINGS: u64 = 0xB5C4090;
     pub const OFFSET_HIGHLIGHTSERVERACTIVESTATES: u64 = 0x298;
     pub const OFFSET_HIGHLIGHTCURRENTCONTEXTID: u64 = 0x294;
     pub const OFFSET_HIGHLIGHTVISIBILITYTYPE: u64 = 0x278;
 
-    pub const VIEW_ANGLE: u64 = 0x24f4 - 0x14;
+    pub const VIEW_ANGLE: u64 = 0x2564 - 0x14;
     // [DataMap.C_Player] -> m_ammoPoolCapacity - 0x14
     
 }

@@ -203,7 +203,7 @@ pub struct Status {
 impl Status {
     /// addr -> entity pointer
     pub fn initialize(&mut self, vp: VmmProcess, addr: u64, base: u64, index: u64) {
-        let data = ContinuingData::new(read_mem(vp, addr, 0x4600));
+        let data = ContinuingData::new(read_mem(vp, addr, 0x4700));
         self.health = data.read_u16(HEALTH); // 0x036c
         self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
 
@@ -229,7 +229,7 @@ impl Status {
     }
 
     pub fn update(&mut self, vp: VmmProcess, addr: &u64) {
-        let data = ContinuingData::new(read_mem(vp, *addr, 0x4600));
+        let data = ContinuingData::new(read_mem(vp, *addr, 0x4700));
         self.health = data.read_u16(HEALTH); // 0x036c
         self.max_health = data.read_u16(MAX_HEALTH); // 0x04a8
 
@@ -1135,30 +1135,30 @@ pub enum InputSystem {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyData {
-    pub data: Vec<i32>,
+    pub data: ContinuingData,
 }
 
 impl Default for KeyData {
     fn default() -> Self {
-        KeyData { data: Vec::with_capacity(255) }
+        KeyData { data: ContinuingData::new(Vec::new()) }
     }
 }
 
 impl KeyData {
     pub fn update_key_state(&mut self, vp: VmmProcess, base: u64) {
-        let data = ContinuingData::new(
-            read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
-        for i in 0..255 {
-            let v = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1;
-            self.data.push(v);
-        }
+        self.data = ContinuingData::new(read_mem(vp, base + INPUT_SYSTEM + 0xb0, 0x20));
+
+        // for i in 0..255 {
+        //     self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
+        // }
     }
     pub fn get_key_state(&self, value: u8) -> bool {
-        match self.data.get((InputSystem(value).0 + 1) as usize) {
-            Some(v) => { return *v == 1; }
-            None => {}
-        };
-        false
+        let key = (self.data.read_i32(((value >> 5) * 4) as u64) >> (value & 31)) & 1;
+        if self.data[(InputSystem(key as u8).0 + 1) as usize] == 1 {
+            true
+        } else {
+            false
+        }
     }
 }
 

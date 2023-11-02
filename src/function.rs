@@ -54,6 +54,29 @@ pub fn get_player_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
         .collect()
 }
 
+pub fn get_(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
+    const SIZE: usize = (60 << 5);
+    // add (1 << 5) skip CWorld
+    let data = read_mem(vp, addr, SIZE);
+
+    data.chunks_exact(0x20)
+        .enumerate()
+        .filter_map(|(index, chunk)| {
+            let chunk_u64 = u64::from_le_bytes(chunk[..8].try_into().unwrap());
+            if index == 0 {
+                None
+            }
+            else if chunk_u64 != 0 {
+                // println!("Index: {}, Value: {}", index, chunk_u64);
+                Some([index as u64, chunk_u64])
+            } else {
+                // println!("Index: {}, Value: {}", index, chunk_u64);
+                None
+            }
+        })
+        .collect()
+}
+
 pub fn get_dummie_pointer_index(vp: VmmProcess, addr: u64) -> Vec<[u64; 2]> {
     const SIZE: usize = (15000 << 5);
     // add (1 << 5) skip CWorld

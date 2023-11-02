@@ -298,15 +298,14 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     let vp = vmm.process_from_name("r5apex.exe").unwrap();
     println!("r5apex.exe Pid -> {}", vp.pid);
 
-    let base:u64;
     println!("========================================");
     println!("vmmprocess.get_module_base():");
-    if let Ok(ba) = vp.get_module_base("r5apex.exe") {
-        println!("r5apex.exe base -> {:x}", ba);
-        base = ba;
+    let base = if let Ok(base) = vp.get_module_base("r5apex.exe") {
+        println!("r5apex.exe base -> {:x}", base);
+        base
     } else {
         panic!("r5apex.exe base address not found!");
-    }
+    };
 
     loop {
         if read_string(vp, base + LEVEL_NAME) == "mp_lobby" {
@@ -327,7 +326,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     // data.config.load();
     loop {
 
-        println!("{}", read_string(vp, base + LEVEL_NAME));
+        // println!("{}", read_string(vp, base + LEVEL_NAME));
         if delay == u16::MAX {
             delay = u16::MIN;
             if read_string(vp, base + LEVEL_NAME) == "mp_lobby" {
@@ -353,7 +352,8 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
             }
             Err(_) => {}
         }
-
+        // println!("{:?}", data.config.screen);
+        // data.config.screen.size = Pos2 { x: 2560.0, y: 1440.0 };
         // entity.status.update(vp, entity.pointer, base);
         // 12 blue  13 22 normal 25 yellow 45 47 51 flash no outline 174 small outline
 
@@ -366,7 +366,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
         data.update_status(vp);
-        data.update_cache(vp);
+        // data.update_cache(vp);
         // let raw = read_mem(vp, data.base + NST_WEAPON_NAMES, 0x10);
         // println!("raw -> {:?}", raw.hex_dump());
         // let mut wp = WeaponX::default();
@@ -382,8 +382,10 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         //     data.cache_data.local_player.set_angle(vp, -cacu.0.to_degrees(), cacu.1.to_degrees());
         // }
 
-        println!("distance_2d -> {:?}", data.cache_data.target.distance_2d);
-        println!("distance -> {:?}", data.cache_data.target.distance);
+        // println!("distance_2d -> {:?}", data.cache_data.target.distance_2d);
+        // println!("distance -> {:?}", data.cache_data.target.distance);
+
+
         // println!("position -> {:?}", data.cache_data.target.position);
         // println!("my position -> {:?}", data.cache_data.local_player.position);
         // println!("my pitch -> {:?}", data.cache_data.local_player.pitch);
@@ -461,7 +463,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                     // data.cache_data.local_player.set_yaw(vp, new_yaw);
                     // data.cache_data.local_player.set_pitch(vp, new_pitch);
                     if data.config.aim.aim_assist.kmbox {
-                        let rt = tokio::runtime::Runtime::new().unwrap();
+                        // let rt = tokio::runtime::Runtime::new().unwrap();
                         // 在 Tokio 运行时中执行异步函数
                     } else {
                         data.cache_data.local_player.set_angle(vp, new_pitch, new_yaw); // 500 µs
@@ -487,9 +489,12 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
-        // println!("Loop time -> {:?}", elapsed_time);
+        println!("Loop time -> {:?}", elapsed_time);
 
-        data_sender.send(data.clone()).expect("data send failed");
+        match data_sender.try_send(data.clone()) {
+            Ok(_) => {}
+            Err(_) => {}
+        }
 
         sleep(Duration::from_micros(100));
         // sleep(Duration::from_millis(1000));

@@ -1,5 +1,5 @@
 [package]
-name = "backend_menu"
+name = "backend_mem"
 version = "0.1.0"
 edition = "2021"
 
@@ -19,3 +19,7 @@ named_constants = "*"
 serde = { version = "1.0.188", features = ["derive"] }
 serde_json = "1.0.107"
 tokio = { version = "1.32.0", features = ["full"] }
+
+
+[profile.dev]
+opt-level = 3

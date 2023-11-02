@@ -1,5 +1,7 @@
 use std::collections::HashMap;
-use memprocfs::VmmProcess;
+use std::env;
+use std::path::PathBuf;
+use memprocfs::{CONFIG_OPT_REFRESH_ALL, Vmm, VmmProcess, VmmProcessInfo};
 use serde::{Deserialize, Serialize};
 use crate::config::Config;
 use crate::constants::offsets::*;
@@ -45,15 +47,66 @@ impl CacheData {
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ProcessData {
+    pub pid: u32,
+    pub base: u64,
+    pub name: String,
+}
+
+/*impl ProcessData {
+    pub fn init(process_name: &str) -> Result<&VmmProcess, Box<dyn std::error::Error>>{
+        println!("DMA for Apex - START");
+        println!("========================================");
+        println!("get vmm path");
+        let mut path = match env::current_dir() {
+            Ok(mut current_dir) => {
+                current_dir.push("vmm.dll");
+                println!("vmm path -> {:?}", current_dir);
+                current_dir
+            }
+            Err(err) => {
+                panic!("Error -> {:?}", err);
+            }
+        };
+        let path = path.to_str()?;
+        // println!("{:?}", path);
+        println!("========================================");
+        let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
+        println!("init vmm dll");
+        let vmm = Vmm::new(path, &vmm_args)?;
+        println!("========================================");
+        println!("fresh vmm memory");
+        let _ = vmm.set_config(CONFIG_OPT_REFRESH_ALL, 1);
+        println!("========================================");
+        println!("get vmmprocess from name");
+        let vp = vmm.process_from_name(process_name)?;
+        println!("{process_name} pid -> {}", vp.pid);
+        Ok(&vp)
+
+    }
+}*/
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Data {
     pub base: u64,
+    // pub proc: ProcessData,
     pub cache_pointer: CachePtr,
     pub cache_data: CacheData,
-    pub grenade: [f32; 2],
     pub key: KeyData,
     pub config: Config,
     // pub table: DataTable,
 }
+
+/*#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Data {
+    pub base: u64,
+    // pub proc: ProcessData,
+    pub cache_pointer: CachePtr,
+    pub cache_data: CacheData,
+    pub key: KeyData,
+    pub config: Config,
+    // pub table: DataTable,
+}*/
 
 impl Data {
     //TODO: improve get player by distance, health, fov
