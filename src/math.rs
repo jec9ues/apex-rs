@@ -45,10 +45,7 @@ pub fn calculate_desired_yaw(from: Pos3, to: Pos3) -> f32{
 
 pub fn calculate_desired_pitch(from: Pos3, to: Pos3) -> f32 {
     let location_delta_z = to.z - from.z;
-    let distance_between_players = distance2d(
-        &Pos2::new(to.x, to.y),
-        &Pos2::new(from.x, from.y)
-    );
+    let distance_between_players = &Pos2::new(to.x, to.y).distance(Pos2::new(from.x, from.y));
 
     let pitch_in_radians = (-location_delta_z / distance_between_players).atan();
     let pitch_in_degrees = pitch_in_radians.to_degrees();

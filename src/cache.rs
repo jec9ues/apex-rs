@@ -92,6 +92,7 @@ pub struct Data {
     // pub proc: ProcessData,
     pub cache_pointer: CachePtr,
     pub cache_data: CacheData,
+    pub grenade: [f32; 2],
     pub key: KeyData,
     pub config: Config,
     // pub table: DataTable,

@@ -10,6 +10,7 @@ use std::time::{Duration, Instant};
 use crossbeam_channel::*;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
+use serde::{Deserialize, Serialize};
 use crate::cache::*;
 use crate::constants::offsets::*;
 use crate::data::*;
@@ -158,7 +159,7 @@ pub fn write_f32_vec(vp: VmmProcess, addr:u64, value: Vec<f32>) {
         .collect())
 }
 
-
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContinuingData {
     pub value: Vec<u8>,
 }
@@ -366,7 +367,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
                     println!("pos -> {:?}",  world_to_screen(local_player.view_matrix, pos, Pos2::new(2560.0, 1440.0)))
                 };*/
         data.update_status(vp);
-        // data.update_cache(vp);
+        data.update_cache(vp);
         // let raw = read_mem(vp, data.base + NST_WEAPON_NAMES, 0x10);
         // println!("raw -> {:?}", raw.hex_dump());
         // let mut wp = WeaponX::default();
@@ -394,6 +395,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
         if data.config.esp.enable || data.config.aim.aim_assist.enable || data.config.aim.trigger_bot.enable {
             data.update_basic(vp, data.config.esp.distance); // ~ 5ms per player
             data.update_target(vp, data.config.aim.distance, data.config.screen.size);
+            println!("target -> {:?}", data.cache_data.target.status.name);
 
             if delay & data.config.esp.delay == 0 {
                 data.update_basic(vp, f32::MAX); // ~ 5ms per player
@@ -489,7 +491,7 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
 
         let end_time = Instant::now();
         let elapsed_time = end_time.duration_since(start_time);
-        println!("Loop time -> {:?}", elapsed_time);
+        // println!("Loop time -> {:?}", elapsed_time);
 
         match data_sender.try_send(data.clone()) {
             Ok(_) => {}

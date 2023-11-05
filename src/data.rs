@@ -1152,13 +1152,9 @@ impl KeyData {
         //     self.data[i] = (data.read_i32(((i >> 5) * 4) as u64) >> (i & 31)) & 1
         // }
     }
-    pub fn get_key_state(&self, value: u8) -> bool {
-        let key = (self.data.read_i32(((value >> 5) * 4) as u64) >> (value & 31)) & 1;
-        if self.data[(InputSystem(key as u8).0 + 1) as usize] == 1 {
-            true
-        } else {
-            false
-        }
+    pub fn get_key_state(&self, key: u8) -> bool {
+        let value = (InputSystem(key).0 + 1);
+        (self.data.read_i32(((value >> 5) * 4) as u64) >> (value & 31)) & 1 == 1
     }
 }
 
