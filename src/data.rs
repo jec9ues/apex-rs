@@ -357,10 +357,11 @@ impl Player {
             return;
         }
         let nearest_bone = self.get_nearest_bone(center).position_2d;
+        // println!("{:?} {:?}", center, nearest_bone);
         ptr.line_segment(
             [center, nearest_bone],
             Stroke::new(2.0, Color32::RED));
-        println!("center -> {:?}", center);
+        // println!("center -> {:?}", center);
         ptr.circle_stroke(nearest_bone, 4.0, Stroke::new(2.0, Color32::GREEN));
     }
 

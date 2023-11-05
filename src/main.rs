@@ -71,7 +71,7 @@ fn setup_custom_fonts(ctx: &egui_backend::egui::Context) {
 
 
 fn main() {
-    log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
+    // log4rs::init_file("log4rs.yaml", Default::default()).unwrap();
 
 
 
@@ -80,7 +80,7 @@ fn main() {
 
     let (data_sender, data_receiver) = bounded::<Data>(1);
 
-    thread::spawn( move || {
+    let network = thread::spawn( move || {
         let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(
             recv_main(
@@ -101,6 +101,8 @@ fn main() {
         menu_config: MenuConfig::default(),
 
     });
+
+    network.join().unwrap()
 }
 
 // TODO: config channel
@@ -135,14 +137,14 @@ impl EguiOverlay for Menu {
         // just some controls to show how you can use glfw_backend
         // let mut da: Data = Data::default();
         let overlay = Painter::new(egui_context.clone(), LayerId::new(Order::TOP, Id::new("overlay")), Rect::EVERYTHING);
-
+        // println!("overlay");
         match self.config_sender.try_send(self.menu_config.config) {
             Ok(_) => {}
             Err(_) => {}
         }
 
         match self.data_receiver.try_recv() {
-            Ok(data) => {
+            Ok(mut data) => {
                 // println!("Received message from thread {:?}", data);
                 self.data = data;
             }
@@ -179,18 +181,28 @@ impl EguiOverlay for Menu {
                     /*yaw*/   y: flip_yaw(grenade_yaw) , z: 0.0},
                 self.data.config.screen.size,
             );
-            overlay.circle(np, 5.0, Color32::TRANSPARENT,
-                           Stroke::new(2.0, Color32::GREEN));
+            overlay.circle(
+                np,
+                5.0,
+                Color32::TRANSPARENT,
+                Stroke::new(2.0, Color32::GREEN
+                ));
         }
         // println!("{:?}", self.data.cache_data.local_player.camera_position);
         // println!("{:?}", np);
 
         // overlay.line_segment([self.data.cache_data.local_player.hitbox.head.position_2d,
         // cp], Stroke::new(2.0, Color32::BLUE));
-        // println!("most far distance -> {}", self.data.get_near_pointer());
+        // println!("center func -> {:?}", self.data.config.screen);
         // self.data.draw_bones_width(overlay.clone());
         if self.menu_config.config.esp.enable {
-            self.data.cache_data.target.target_line(overlay.clone(), self.data.config.screen.center());
+            self.data.cache_data.target.target_line(overlay.clone(), self.menu_config.config.screen.center());
+            overlay.circle(
+                self.menu_config.config.screen.center(),
+                5.0,
+                Color32::TRANSPARENT,
+                Stroke::new(2.0, Color32::GREEN
+                ));
             if self.data.cache_data.target.status.visible() {
                 self.data.cache_data.target.bone_esp(overlay.clone(), 999.0, Color32::GREEN);
             } else {
