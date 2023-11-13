@@ -1,9 +1,8 @@
 extern crate core;
 
 
-use log4rs;
 use std::mem::size_of;
-use std::{env, thread, time};
+use std::{env};
 use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
@@ -281,12 +280,12 @@ pub fn main_mem(data_sender: Sender<Data>, config_recv: Receiver<Config>, restar
     println!("DMA for Apex - START");
     let path = path.to_str().unwrap();
     println!("{:?}", path);
-    let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
-    let vmm = Vmm::new(path, &vmm_args).unwrap();
+    // let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
+    // let vmm = Vmm::new(path, &vmm_args).unwrap();
     // let vmm = Vmm::new("D://ovo-rs//vmm.dll", &vmm_args).unwrap();
 
-    // let vmm_args = ["-device", "qemu://shm=qemu-win10.mem,qmp=/tmp/qmp-win10.sock"].to_vec();
-    // let vmm = Vmm::new("/mnt/test/vmm.so", &vmm_args).unwrap();
+    let vmm_args = ["-device", "qemu://shm=qemu-win10.mem,qmp=/tmp/qmp-win10.sock"].to_vec();
+    let vmm = Vmm::new("/root/vmm.so", &vmm_args).unwrap();
     println!("vmm result = ok!");
 
     println!("========================================");

@@ -11,7 +11,7 @@ use crate::config::Config;
 
 
 pub async fn main_network(data_receiver: Receiver<Data>, config_sender: Sender<Config>, restart_sender: Sender<bool>) {
-    let local_addr = format!("{}:{}", "192.168.31.143", "9999");
+    let local_addr = format!("{}:{}", "192.168.31.240", "9999");
     let mut send_buf: [u8; 65535] = [0; 65535];
     let mut recv_buf:[u8; 65535] = [0; 65535];
     let local = UdpSocket::bind(local_addr).await.expect("bind ip failed");
@@ -49,7 +49,7 @@ pub async fn main_network(data_receiver: Receiver<Data>, config_sender: Sender<C
                     Err(e) => { println!("encode string -> {:?}", e); continue }
                 };
                 // send
-                match local.try_send_to(&send_buf[..data_length], SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 31, 143)), 9998)) {
+                match local.try_send_to(&send_buf[..data_length], SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 31, 17)), 9998)) {
                     Ok(_) => { /*println!("{:?}", data)*/ }
                     Err(_) => {} // try send no need to report error
                 };

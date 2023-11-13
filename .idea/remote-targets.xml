@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="RemoteTargetsManager">
+    <targets>
+      <target name="pve-rust-compiler" type="ssh/sftp" uuid="68b04bcf-7622-49a1-b674-1accdff071c9">
+        <config>
+          <option name="projectRootOnTarget" value="/root/backend-mem" />
+          <option name="serverName" value="pve-rust-compiler" />
+        </config>
+        <ContributedStateBase type="RsLanguageRuntime">
+          <config>
+            <option name="cargoPath" value="/root/.cargo/bin/cargo" />
+            <option name="cargoVersion" value="1.75.0-nightly (65e297d1e 2023-11-03)" />
+            <option name="rustcPath" value="/root/.cargo/bin/rustc" />
+            <option name="rustcVersion" value="1.75.0-nightly (4b85902b4 2023-11-04)" />
+          </config>
+        </ContributedStateBase>
+      </target>
+    </targets>
+  </component>
+</project>

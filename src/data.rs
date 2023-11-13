@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Display, format, Formatter};
-use log::*;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
 use crate::constants::offsets::*;

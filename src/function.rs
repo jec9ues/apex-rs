@@ -1,14 +1,12 @@
 use std::fmt::Error;
 use crate::mem::*;
 use crate::constants::offsets::*;
-use log4rs;
 use std::mem::size_of;
 use std::pin::Pin;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use std::u8;
 use std::default::Default;
-use log::{debug, info};
 use memprocfs::*;
 use pretty_hex::*;
 
@@ -261,7 +259,7 @@ pub fn item_loba_glow(vp: VmmProcess, base: u64) {
     let pointer_list = get_entity_pointer(vp, addr);
     for ent in pointer_list.into_iter() {
         let name = get_client_class_name(vp, ent);
-        debug!("network_name -> {}", name);
+        println!("network_name -> {}", name);
         if name == "CPropSurvival" {
             write_u64(vp, ent + 0x02f0, 1363184265); // loba-style
         }
