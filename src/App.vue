@@ -1,19 +1,23 @@
 <template>
   <div v-drag class="draggable w-[500px]">
-    <Tabs default-value="Debug" class="w-[100%]">
-      <TabsList class="grid w-full grid-cols-3">
+    <Tabs default-value="AimBot" class="w-[100%]">
+      <TabsList class="grid w-full grid-cols-4">
+        <TabsTrigger value="AimBot"> AimBot </TabsTrigger>
+        <TabsTrigger value="Visual"> Visual </TabsTrigger>
+        <TabsTrigger value="Misc"> Misc </TabsTrigger>
         <TabsTrigger value="Debug"> Debug </TabsTrigger>
-        <TabsTrigger value="Menu"> Menu </TabsTrigger>
-        <TabsTrigger value="Config"> Config </TabsTrigger>
       </TabsList>
+      <TabsContent value="AimBot">
+        <AimBotComponet />
+      </TabsContent>
+      <TabsContent value="Visual">
+        <VisualComponet />
+      </TabsContent>
+      <TabsContent value="Misc">
+        <MiscComponent />
+      </TabsContent>
       <TabsContent value="Debug">
         <DebugComponet />
-      </TabsContent>
-      <TabsContent value="Menu">
-        <MenuComponet />
-      </TabsContent>
-      <TabsContent value="Config">
-        <ConfigComponent />
       </TabsContent>
     </Tabs>
   </div>
@@ -22,9 +26,10 @@
 <script lang="ts" setup>
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+import AimBotComponet from '@/components/AimBotComponent.vue'
+import VisualComponet from '@/components/VisualComponent.vue'
+import MiscComponent from '@/components/MiscComponent.vue'
 import DebugComponet from '@/components/DebugComponent.vue'
-import MenuComponet from '@/components/MenuComponent.vue'
-import ConfigComponent from '@/components/ConfigComponent.vue'
 
 import { useDark } from '@vueuse/core'
 useDark()
@@ -36,6 +41,7 @@ useDark()
 body {
   width: 100vw;
   height: 100vh;
+  overflow: hidden;
 
   #app {
     width: 100%;
@@ -43,8 +49,8 @@ body {
 
     .draggable {
       position: absolute;
-      left: 100px;
-      top: 100px;
+      left: 50px;
+      top: 50px;
     }
   }
 

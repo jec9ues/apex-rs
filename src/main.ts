@@ -1,4 +1,7 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import ElementPlus from 'element-plus'
+import 'element-plus/theme-chalk/dark/css-vars.css'
 import App from './App.vue'
 
 const app = createApp(App)
@@ -34,10 +37,12 @@ app.directive('drag', {
     }
 
     window.onresize = function () {
-      el.style.left = '100px'
-      el.style.top = '100px'
+      el.style.left = '50px'
+      el.style.top = '50px'
     }
   }
 })
 
+app.use(ElementPlus)
+app.use(createPinia())
 app.mount('#app')
