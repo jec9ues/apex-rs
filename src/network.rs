@@ -11,7 +11,7 @@ use crate::config::Config;
 
 
 pub async fn recv_main(data_sender: Sender<Data>, config_receiver: Receiver<Config>) {
-    let ip = "192.168.31.143";
+    let ip = "192.168.31.17";
     let port = "9998";
     let mut send_buf: [u8; 65535] = [0; 65535];
     let mut recv_buf:[u8; 65535] = [0; 65535];
@@ -49,7 +49,7 @@ pub async fn recv_main(data_sender: Sender<Data>, config_receiver: Receiver<Conf
                     Err(e) => { println!("encode string -> {:?}", e); continue }
                 };
                 // send
-                match local.try_send_to(&send_buf[..config_length], SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 31, 143)), 9999)) {
+                match local.try_send_to(&send_buf[..config_length], SocketAddr::new(IpAddr::V4(Ipv4Addr::new(192, 168, 31, 240)), 9999)) {
                     Ok(_) => {}
                     Err(_) => {}
                 };

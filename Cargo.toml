@@ -9,7 +9,7 @@ edition = "2021"
 egui_backend = { version = "*", features = ["egui_serde"] }
 egui_window_glfw_passthrough = "0.4.2"
 crossbeam-channel = "*"
-egui_render_three_d = "*"
+egui_render_three_d = "0.4.0"
 
 
 pretty-hex = "*"
