@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::{Receiver, Sender};
-use mem_struct::data_struct::apex::constants::offsets::LEVEL_NAME;
+use mem_struct::data_struct::apex::constants::offsets::{CL_ENTITYLIST, LEVEL_NAME};
+use mem_struct::data_struct::apex::structs::EntityList;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
 use serde::{Deserialize, Serialize};
@@ -61,6 +62,7 @@ pub fn main_mem(results_sender: Sender<Vec<MemChunk>>, query_receiver: Receiver<
 
         let nn = vp.read_direct(base + LEVEL_NAME, 32);
         println!("{:?}", vp.read::<String>(base + LEVEL_NAME));
+        println!("{:?}", vp.read_op::<EntityList>(base + CL_ENTITYLIST, (60 << 5)));
         sleep(Duration::from_secs(1))
         // if let Ok(v) = query_receiver.try_recv() {
         //     if v.is_empty() { continue };
