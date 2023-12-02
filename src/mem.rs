@@ -1,27 +1,14 @@
-use std::env;
+use std::{env, ptr};
 use std::path::PathBuf;
-use std::time::{Instant};
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 use crossbeam_channel::{Receiver, Sender};
+use mem_struct::data_struct::apex::constants::offsets::LEVEL_NAME;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
 use serde::{Deserialize, Serialize};
+use crate::interface::{Interface, Readable};
 use crate::network::{CMD, MemChunk};
-
-pub fn read_mem(vp: &VmmProcess, addr: u64, size: usize) -> Vec<u8> {
-    match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
-        Err(e) => {
-            println!("{}:{} -> read fail [{}]", e, addr, size);
-            Vec::new() // 在错误情况下返回一个空的 Vec<u8>
-        },
-        Ok(data) => {
-            data
-        },
-    }
-}
-pub fn write_mem(vp: &VmmProcess, addr:u64, data: Vec<u8>) {
-    if let Err(e) = vp.mem_write(addr, &data) { println!("{}:{} -> write fail [{}]", e, addr, data.len()) }
-}
-
 
 
 /// send: data, recv: config
@@ -67,30 +54,35 @@ pub fn main_mem(results_sender: Sender<Vec<MemChunk>>, query_receiver: Receiver<
     } else {
         panic!("r5apex.exe base address not found!");
     };
-
-    let mut mem_chunks: Vec<MemChunk> = Vec::new();
+    //
+    // let mut mem_chunks: Vec<MemChunk> = Vec::new();
 
     loop {
-        if let Ok(v) = query_receiver.try_recv() {
-            if v.is_empty() { continue };
-            for mut i in v {
-                match i.cmd {
-                    CMD::Read => { i.data = read_mem(&vp, i.addr, i.size as usize); }
-                    CMD::Write => { write_mem(&vp, i.addr, i.data.to_vec()); continue }
-                    CMD::GetBase => { i.addr = base; }
-                }
-                mem_chunks.push(i);
 
-            }
-        };
+        let nn = vp.read_direct(base + LEVEL_NAME, 32);
+        println!("{:?}", vp.read::<String>(base + LEVEL_NAME));
+        sleep(Duration::from_secs(1))
+        // if let Ok(v) = query_receiver.try_recv() {
+        //     if v.is_empty() { continue };
+        //     for mut i in v {
+        //         match i.cmd {
+        //             CMD::Read => { i.data = read_mem(&vp, i.addr, i.size as usize); }
+        //             CMD::Write => { write_mem(&vp, i.addr, i.data.to_vec()); continue }
+        //             CMD::GetBase => { i.addr = base;  }
+        //
+        //         }
+        //         mem_chunks.push(i);
+        //
+        //     }
+        // };
         // let start = Instant::now();
         // for _i in 1..10000 {
         //     read_mem(&vp, base + 0x16966f0, 65000 ).hex_dump();
         // };
         // let end = Instant::now() - start;
         // println!("loop 10000 -> {:?}", end);
-
-        if results_sender.try_send(mem_chunks.clone()).is_ok() { mem_chunks.clear() };
+        //
+        // if results_sender.try_send(mem_chunks.clone()).is_ok() { mem_chunks.clear() };
     }
 
 }
