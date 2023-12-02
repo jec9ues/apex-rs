@@ -1,0 +1,97 @@
+use std::env;
+use std::path::PathBuf;
+use std::time::{Instant};
+use crossbeam_channel::{Receiver, Sender};
+use memprocfs::*;
+use pretty_hex::PrettyHex;
+use serde::{Deserialize, Serialize};
+use crate::network::{CMD, MemChunk};
+
+pub fn read_mem(vp: &VmmProcess, addr: u64, size: usize) -> Vec<u8> {
+    match vp.mem_read_ex(addr, size, FLAG_NOCACHE | FLAG_ZEROPAD_ON_FAIL | FLAG_NOPAGING) {
+        Err(e) => {
+            println!("{}:{} -> read fail [{}]", e, addr, size);
+            Vec::new() // 在错误情况下返回一个空的 Vec<u8>
+        },
+        Ok(data) => {
+            data
+        },
+    }
+}
+pub fn write_mem(vp: &VmmProcess, addr:u64, data: Vec<u8>) {
+    if let Err(e) = vp.mem_write(addr, &data) { println!("{}:{} -> write fail [{}]", e, addr, data.len()) }
+}
+
+
+
+/// send: data, recv: config
+pub fn main_mem(results_sender: Sender<Vec<MemChunk>>, query_receiver: Receiver<Vec<MemChunk>>) {
+    let mut path = PathBuf::new();
+    match env::current_dir() {
+        Ok(mut current_dir) => {
+            if cfg!(windows) {
+                current_dir.push("vmm.dll");
+            } else {
+                current_dir.push("vmm.so");
+            }
+            println!("{:?} -> {:?}", env::consts::OS, current_dir);
+            path = current_dir
+        }
+        Err(err) => {
+            eprintln!("Error: {:?}", err);
+        }
+    }
+    println!("DMA device initializing");
+    let path = path.to_str().unwrap();
+    let vmm_args = ["-device", "fpga", "-memmap", "auto"].to_vec();
+
+    let vmm_args = ["-printf", "-v", "-waitinitialize", "-device", "qemu://shm=qemu-win10.mem,qmp=/tmp/qmp-win10.sock", "-vm"].to_vec();
+    let vmm = Vmm::new("/root/vmm.so", &vmm_args).unwrap();
+    println!("vmm result = ok!");
+
+    println!("========================================");
+    println!("Vmm.set_config():");
+    let _ = vmm.set_config(CONFIG_OPT_REFRESH_ALL, 1);
+    println!("caches full refresh: -> Ok");
+
+    println!("========================================");
+    println!("vmm.process_from_name():");
+    let vp = vmm.process_from_name("r5apex.exe").unwrap();
+    println!("r5apex.exe Pid -> {}", vp.pid);
+
+    println!("========================================");
+    println!("vmmprocess.get_module_base():");
+    let base = if let Ok(base) = vp.get_module_base("r5apex.exe") {
+        println!("r5apex.exe base -> {:x}", base);
+        base
+    } else {
+        panic!("r5apex.exe base address not found!");
+    };
+
+    let mut mem_chunks: Vec<MemChunk> = Vec::new();
+
+    loop {
+        if let Ok(v) = query_receiver.try_recv() {
+            if v.is_empty() { continue };
+            for mut i in v {
+                match i.cmd {
+                    CMD::Read => { i.data = read_mem(&vp, i.addr, i.size as usize); }
+                    CMD::Write => { write_mem(&vp, i.addr, i.data.to_vec()); continue }
+                    CMD::GetBase => { i.addr = base; }
+                }
+                mem_chunks.push(i);
+
+            }
+        };
+        // let start = Instant::now();
+        // for _i in 1..10000 {
+        //     read_mem(&vp, base + 0x16966f0, 65000 ).hex_dump();
+        // };
+        // let end = Instant::now() - start;
+        // println!("loop 10000 -> {:?}", end);
+
+        if results_sender.try_send(mem_chunks.clone()).is_ok() { mem_chunks.clear() };
+    }
+
+}
+
