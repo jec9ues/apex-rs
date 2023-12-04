@@ -1,4 +1,6 @@
 use mem_struct::data_struct::apex::*;
+use std::str::FromStr;
+use mem_struct::data_struct::apex::model_name::{MODEL_NAME_PLAYER, ModelNamePlayer};
 use mem_struct::data_struct::apex::structs::EntityList;
 use memprocfs::{FLAG_NOCACHE, FLAG_NOPAGING, FLAG_ZEROPAD_ON_FAIL, VmmProcess};
 
@@ -145,5 +147,17 @@ impl FromBytes for EntityList {
         } else {
             None
         }
+    }
+}
+
+impl FromBytes for ModelNamePlayer {
+    fn from_bytes(bytes: &[u8]) -> Option<Self> {
+        let trimmed_bytes = bytes.iter().position(|&x| x == 0).map(|pos| &bytes[..pos]);
+        let model_name = String::from_utf8(trimmed_bytes.unwrap_or(bytes).to_vec()).unwrap();
+        let model = MODEL_NAME_PLAYER.get(&*model_name.as_str()).cloned();
+        if model.is_none() {
+            println!("null type -> {}", model_name);
+        };
+        model
     }
 }

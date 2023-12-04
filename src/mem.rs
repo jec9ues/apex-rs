@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 use crossbeam_channel::{Receiver, Sender};
-use mem_struct::data_struct::apex::constants::offsets::{CL_ENTITYLIST, LEVEL_NAME};
+use mem_struct::data_struct::apex::constants::offsets::{CL_ENTITYLIST, LEVEL_NAME, MODEL_NAME, SIGN_NAME};
+use mem_struct::data_struct::apex::model_name::{ ModelNamePlayer};
 use mem_struct::data_struct::apex::structs::EntityList;
 use memprocfs::*;
 use pretty_hex::PrettyHex;
@@ -59,11 +60,21 @@ pub fn main_mem(results_sender: Sender<Vec<MemChunk>>, query_receiver: Receiver<
     // let mut mem_chunks: Vec<MemChunk> = Vec::new();
 
     loop {
+        let entitylist = vp.read_op::<EntityList>(base + CL_ENTITYLIST, (60 << 5)).unwrap();
 
-        let nn = vp.read_direct(base + LEVEL_NAME, 32);
-        println!("{:?}", vp.read::<String>(base + LEVEL_NAME));
-        println!("{:?}", vp.read_op::<EntityList>(base + CL_ENTITYLIST, (60 << 5)));
-        sleep(Duration::from_secs(1))
+        for (index, ent) in entitylist.data {
+            ent.map(|v| {
+                let model_ptr = vp.read::<u64>(v + 0x0030).unwrap();
+                let h = vp.read_direct(model_ptr, 0x60).unwrap();
+                vp.read_op::<ModelNamePlayer>(model_ptr, 0x60);
+                // println!("model -> {:?}", h.hex_dump());
+
+                // let h = vp.read_direct(v + MODEL_NAME, 0x10).unwrap();
+                // println!("model -> {:?}", h.hex_dump());
+            });
+        }
+        // println!("{:?}", vp.read_op::<EntityList>(base + CL_ENTITYLIST, (60 << 5)));
+        sleep(Duration::from_secs(5))
         // if let Ok(v) = query_receiver.try_recv() {
         //     if v.is_empty() { continue };
         //     for mut i in v {
